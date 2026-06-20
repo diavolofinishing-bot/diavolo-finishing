@@ -522,6 +522,17 @@ select.cta-input option{background:#150000;color:var(--ash);}
 .quote-success .qs-icon{font-size:34px;}
 .quote-success h3{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:.04em;color:var(--ash);margin:.5rem 0;}
 .quote-success p{font-family:'Barlow',sans-serif;font-size:14px;color:var(--mist);}
+.qf-label{font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ember);margin:10px 0 -2px 2px;display:block;}
+.finish-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.finish-pill{display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:rgba(6,0,0,.8);border:1px solid var(--blood);border-radius:3px;padding:12px 14px;cursor:pointer;transition:all .18s;text-align:left;color:var(--ash);}
+.finish-pill .ft{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;}
+.finish-pill .fd{font-size:11px;color:var(--mist);}
+.finish-pill:hover{border-color:var(--fire);}
+.finish-pill.active{border-color:var(--ember);background:rgba(196,17,0,.14);box-shadow:0 0 16px var(--glow-soft);}
+.finish-pill.active .fd{color:var(--ash);}
+.qf-photo-hint{font-size:12px;color:var(--mist);margin:4px 2px 0;line-height:1.4;}
+.qf-photo-hint strong{color:var(--ember);font-weight:600;}
+@media(max-width:600px){.finish-grid{grid-template-columns:1fr;}}
 
 /* ═══════════════════════════════════════════════════════════
    CONTACT + PAYMENT
@@ -923,7 +934,7 @@ footer{
 <!-- ═══ CTA BANNER ═══ -->
 <div class="cta-banner" id="quote">
   <h2 class="cta-title">Ready to Get Started?</h2>
-  <p class="cta-sub">Drop us your name and number — we'll call you back same day.</p>
+  <p class="cta-sub">Tell us about your wheels &amp; finish — we'll quote you same day.</p>
   <a href="tel:+13238411995" class="cta-phone">(323) 841-1995</a>
   <form class="quote-form" id="quoteForm" action="https://api.web3forms.com/submit" method="POST" novalidate>
     <input type="hidden" name="access_key" value="0e84314b-0328-4bfa-bc3e-08d4fed87b1c">
@@ -935,20 +946,34 @@ footer{
       <input class="cta-input" id="qfName" type="text" name="name" placeholder="Your name *" autocomplete="name">
       <input class="cta-input" id="qfPhone" type="tel" name="phone" placeholder="Phone number" autocomplete="tel">
     </div>
-    <div class="qf-row">
-      <input class="cta-input" id="qfEmail" type="email" name="email" placeholder="Email" autocomplete="email">
-      <select class="cta-input" name="service" aria-label="Service needed">
-        <option value="">Service needed...</option>
-        <option>Powder Coating</option>
-        <option>Wheel Refinishing</option>
-        <option>Metal Finishing</option>
-        <option>Media Blasting</option>
-        <option>High Polishing</option>
-        <option>Gates &amp; Fences</option>
-        <option>Other / Not sure</option>
-      </select>
+    <input class="cta-input" id="qfEmail" type="email" name="email" placeholder="Email" autocomplete="email">
+
+    <label class="qf-label" for="qfSize">1 &nbsp;Wheel Size *</label>
+    <select class="cta-input" id="qfSize" name="wheel_size">
+      <option value="">Select wheel size…</option>
+      <option>12"</option><option>13"</option><option>14"</option><option>15"</option>
+      <option>16"</option><option>17"</option><option>18"</option><option>19"</option>
+      <option>20"</option><option>21"</option><option>22"</option><option>23"</option>
+      <option>24"</option><option>26"</option>
+      <option>Other (tell us below)</option>
+    </select>
+
+    <label class="qf-label">2 &nbsp;Finish / Service *</label>
+    <input type="hidden" name="finish" id="qfFinish" value="">
+    <div class="finish-grid" id="qfFinishGrid">
+      <div class="finish-pill" data-finish="One Tone" data-color="1"><span class="ft">One Tone</span><span class="fd">Single color — generic or color code</span></div>
+      <div class="finish-pill" data-finish="Two Tone" data-color="1"><span class="ft">Two Tone</span><span class="fd">Two colors — generic or color code</span></div>
+      <div class="finish-pill" data-finish="High Polish" data-color="0"><span class="ft">High Polish</span><span class="fd">Mirror-polished finish</span></div>
+      <div class="finish-pill" data-finish="Brush Aluminum" data-color="0"><span class="ft">Brush Aluminum</span><span class="fd">Brushed aluminum finish</span></div>
     </div>
-    <textarea class="cta-input" name="message" rows="3" placeholder="Tell us about your project - parts, color, quantity..."></textarea>
+
+    <div class="color-field" id="qfColorField" style="display:none;">
+      <label class="qf-label" for="qfColor">3 &nbsp;Color or Color Code</label>
+      <input class="cta-input" id="qfColor" name="color" placeholder="e.g. Gloss Black, Candy Red — or a color code (RAL / Tiger)">
+    </div>
+
+    <textarea class="cta-input" name="message" rows="3" placeholder="Anything else? Quantity, wheel condition, deadline…"></textarea>
+    <p class="qf-photo-hint">📷 Got photos of your wheels? Tap the <strong>WhatsApp</strong> or <strong>Text</strong> button (bottom-right) to send them.</p>
     <button class="cta-send" type="submit" id="qfSubmit">SEND IT</button>
     <p class="qf-status" id="qfStatus" aria-live="polite"></p>
   </form>
@@ -1110,6 +1135,16 @@ footer{
   var name=document.getElementById('qfName');
   var phone=document.getElementById('qfPhone');
   var email=document.getElementById('qfEmail');
+  var size=document.getElementById('qfSize');
+  var finishInput=document.getElementById('qfFinish');
+  var colorField=document.getElementById('qfColorField');
+  var pills=[].slice.call(document.querySelectorAll('#qfFinishGrid .finish-pill'));
+  pills.forEach(function(pp){pp.addEventListener('click',function(){
+    pills.forEach(function(x){x.classList.remove('active');});
+    pp.classList.add('active');
+    finishInput.value=pp.getAttribute('data-finish');
+    colorField.style.display=pp.getAttribute('data-color')==='1'?'block':'none';
+  });});
   function err(msg,field){statusEl.textContent=msg;statusEl.className='qf-status err';if(field)field.focus();}
   form.addEventListener('submit',function(e){
     e.preventDefault();
@@ -1118,6 +1153,8 @@ footer{
     if(!n){return err('Please enter your name.',name);}
     if(!p && !em){return err('Add a phone number or email so we can reach you.',phone);}
     if(em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){return err('That email looks off - please check it.',email);}
+    if(!size.value){return err('Please choose a wheel size.',size);}
+    if(!finishInput.value){return err('Please pick a finish / service.');}
     btn.disabled=true; var orig=btn.textContent; btn.textContent='SENDING...';
     fetch('https://api.web3forms.com/submit',{method:'POST',body:new FormData(form),headers:{'Accept':'application/json'}})
       .then(function(r){return r.json();})
