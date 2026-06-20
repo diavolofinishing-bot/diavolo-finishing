@@ -1157,42 +1157,50 @@ footer{
     colorField.style.display=pp.getAttribute('data-color')==='1'?'block':'none';
   });});
   var photoInput=document.getElementById('qfPhoto');
-  var photoUrl=document.getElementById('qfPhotoUrl');
   var photoStatus=document.getElementById('qfPhotoStatus');
-  var photoUploading=false;
   if(photoInput){
     photoInput.addEventListener('change',function(){
-      var f=photoInput.files[0]; if(!f){photoUrl.value='';photoStatus.textContent='';return;}
-      if(f.size>10*1024*1024){photoStatus.textContent='That photo is over 10MB — please pick a smaller one or send via WhatsApp/Text.';photoStatus.className='qf-photo-status err';photoInput.value='';photoUrl.value='';return;}
-      photoUploading=true; photoUrl.value='';
-      photoStatus.textContent='Uploading photo…'; photoStatus.className='qf-photo-status';
-      var fd=new FormData(); fd.append('file',f); fd.append('upload_preset','ml_default');
-      fetch('https://api.cloudinary.com/v1_1/dnst5pvqc/image/upload',{method:'POST',body:fd})
-        .then(function(r){return r.json();})
-        .then(function(j){
-          photoUploading=false;
-          if(j && j.secure_url){photoUrl.value=j.secure_url;photoStatus.textContent='✓ Photo attached';photoStatus.className='qf-photo-status ok';}
-          else{photoStatus.textContent='Photo upload failed — you can send it via WhatsApp/Text instead.';photoStatus.className='qf-photo-status err';}
-        })
-        .catch(function(){photoUploading=false;photoStatus.textContent='Photo upload failed — you can send it via WhatsApp/Text instead.';photoStatus.className='qf-photo-status err';});
+      var f=photoInput.files[0];
+      if(!f){photoStatus.textContent='';return;}
+      if(f.size>15*1024*1024){photoStatus.textContent='That photo is over 15MB — please pick a smaller one or send via WhatsApp/Text.';photoStatus.className='qf-photo-status err';photoInput.value='';return;}
+      photoStatus.textContent='✓ Photo ready: '+f.name;photoStatus.className='qf-photo-status ok';
     });
   }
+  function resizeToBase64(file,cb){
+    try{
+      var reader=new FileReader();
+      reader.onload=function(ev){
+        var img=new Image();
+        img.onload=function(){
+          var max=1280,w=img.width,h=img.height;
+          if(w>max||h>max){ if(w>=h){h=Math.round(h*max/w);w=max;} else {w=Math.round(w*max/h);h=max;} }
+          var c=document.createElement('canvas');c.width=w;c.height=h;
+          c.getContext('2d').drawImage(img,0,0,w,h);
+          cb(c.toDataURL('image/jpeg',0.82).split(',')[1]);
+        };
+        img.onerror=function(){cb(null);};
+        img.src=ev.target.result;
+      };
+      reader.onerror=function(){cb(null);};
+      reader.readAsDataURL(file);
+    }catch(e){cb(null);}
+  }
+  function postLog(d){ try{ fetch(SHEET_LOG_URL,{method:'POST',mode:'no-cors',body:d}); }catch(e){} }
   function logToSheet(){
     if(!SHEET_LOG_URL || SHEET_LOG_URL.indexOf('http')!==0) return;
-    try{
-      var d=new URLSearchParams();
-      d.append('name',name.value.trim());
-      d.append('phone',phone.value.trim());
-      d.append('email',email.value.trim());
-      d.append('wheel_size',size.value);
-      d.append('finish',finishInput.value);
-      var cEl=document.getElementById('qfColor');
-      d.append('color',cEl?cEl.value.trim():'');
-      var mEl=form.querySelector('textarea[name="message"]');
-      d.append('message',mEl?mEl.value.trim():'');
-      d.append('photo_url',photoUrl.value);
-      fetch(SHEET_LOG_URL,{method:'POST',mode:'no-cors',body:d});
-    }catch(err){}
+    var d=new URLSearchParams();
+    d.append('name',name.value.trim());
+    d.append('phone',phone.value.trim());
+    d.append('email',email.value.trim());
+    d.append('wheel_size',size.value);
+    d.append('finish',finishInput.value);
+    var cEl=document.getElementById('qfColor');
+    d.append('color',cEl?cEl.value.trim():'');
+    var mEl=form.querySelector('textarea[name="message"]');
+    d.append('message',mEl?mEl.value.trim():'');
+    var f=photoInput&&photoInput.files[0];
+    if(f){ resizeToBase64(f,function(b64){ if(b64){ d.append('photo_b64',b64); d.append('photo_name',f.name||'wheel.jpg'); d.append('photo_type','image/jpeg'); } postLog(d); }); }
+    else { postLog(d); }
   }
   function err(msg,field){statusEl.textContent=msg;statusEl.className='qf-status err';if(field)field.focus();}
   form.addEventListener('submit',function(e){
@@ -1204,7 +1212,6 @@ footer{
     if(em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){return err('That email looks off - please check it.',email);}
     if(!size.value){return err('Please choose a wheel size.',size);}
     if(!finishInput.value){return err('Please pick a finish / service.');}
-    if(photoUploading){return err('Hang on — your photo is still uploading.');}
     logToSheet();
     btn.disabled=true; var orig=btn.textContent; btn.textContent='SENDING...';
     fetch('https://api.web3forms.com/submit',{method:'POST',body:new FormData(form),headers:{'Accept':'application/json'}})
