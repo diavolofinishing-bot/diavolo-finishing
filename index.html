@@ -532,6 +532,12 @@ select.cta-input option{background:#150000;color:var(--ash);}
 .finish-pill.active .fd{color:var(--ash);}
 .qf-photo-hint{font-size:12px;color:var(--mist);margin:4px 2px 0;line-height:1.4;}
 .qf-photo-hint strong{color:var(--ember);font-weight:600;}
+.qf-file{padding:10px 14px;font-size:13px;color:var(--mist);cursor:pointer;}
+.qf-file::file-selector-button{background:var(--blood);color:var(--ash);border:none;border-radius:2px;padding:8px 13px;margin-right:12px;cursor:pointer;font-family:'Barlow',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.05em;}
+.qf-file::-webkit-file-upload-button{background:var(--blood);color:var(--ash);border:none;border-radius:2px;padding:8px 13px;margin-right:12px;cursor:pointer;font-family:'Barlow',sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.05em;}
+.qf-photo-status{font-size:12px;margin:2px 2px 0;min-height:14px;color:var(--mist);font-family:'Barlow',sans-serif;}
+.qf-photo-status.ok{color:#7CFC9A;}
+.qf-photo-status.err{color:var(--bright);}
 @media(max-width:600px){.finish-grid{grid-template-columns:1fr;}}
 
 /* ═══════════════════════════════════════════════════════════
@@ -972,8 +978,12 @@ footer{
       <input class="cta-input" id="qfColor" name="color" placeholder="e.g. Gloss Black, Candy Red — or a color code (RAL / Tiger)">
     </div>
 
+    <label class="qf-label">📷 Photo of Your Wheels (optional)</label>
+    <input type="file" id="qfPhoto" accept="image/*" class="cta-input qf-file">
+    <p class="qf-photo-status" id="qfPhotoStatus" aria-live="polite"></p>
+    <input type="hidden" name="photo_url" id="qfPhotoUrl" value="">
     <textarea class="cta-input" name="message" rows="3" placeholder="Anything else? Quantity, wheel condition, deadline…"></textarea>
-    <p class="qf-photo-hint">📷 Got photos of your wheels? Tap the <strong>WhatsApp</strong> or <strong>Text</strong> button (bottom-right) to send them.</p>
+    <p class="qf-photo-hint">Prefer to send photos by chat? Use the <strong>WhatsApp</strong> or <strong>Text</strong> button instead.</p>
     <button class="cta-send" type="submit" id="qfSubmit">SEND IT</button>
     <p class="qf-status" id="qfStatus" aria-live="polite"></p>
   </form>
@@ -1145,6 +1155,27 @@ footer{
     finishInput.value=pp.getAttribute('data-finish');
     colorField.style.display=pp.getAttribute('data-color')==='1'?'block':'none';
   });});
+  var photoInput=document.getElementById('qfPhoto');
+  var photoUrl=document.getElementById('qfPhotoUrl');
+  var photoStatus=document.getElementById('qfPhotoStatus');
+  var photoUploading=false;
+  if(photoInput){
+    photoInput.addEventListener('change',function(){
+      var f=photoInput.files[0]; if(!f){photoUrl.value='';photoStatus.textContent='';return;}
+      if(f.size>10*1024*1024){photoStatus.textContent='That photo is over 10MB — please pick a smaller one or send via WhatsApp/Text.';photoStatus.className='qf-photo-status err';photoInput.value='';photoUrl.value='';return;}
+      photoUploading=true; photoUrl.value='';
+      photoStatus.textContent='Uploading photo…'; photoStatus.className='qf-photo-status';
+      var fd=new FormData(); fd.append('file',f); fd.append('upload_preset','ml_default');
+      fetch('https://api.cloudinary.com/v1_1/dnst5pvqc/image/upload',{method:'POST',body:fd})
+        .then(function(r){return r.json();})
+        .then(function(j){
+          photoUploading=false;
+          if(j && j.secure_url){photoUrl.value=j.secure_url;photoStatus.textContent='✓ Photo attached';photoStatus.className='qf-photo-status ok';}
+          else{photoStatus.textContent='Photo upload failed — you can send it via WhatsApp/Text instead.';photoStatus.className='qf-photo-status err';}
+        })
+        .catch(function(){photoUploading=false;photoStatus.textContent='Photo upload failed — you can send it via WhatsApp/Text instead.';photoStatus.className='qf-photo-status err';});
+    });
+  }
   function err(msg,field){statusEl.textContent=msg;statusEl.className='qf-status err';if(field)field.focus();}
   form.addEventListener('submit',function(e){
     e.preventDefault();
@@ -1155,6 +1186,7 @@ footer{
     if(em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)){return err('That email looks off - please check it.',email);}
     if(!size.value){return err('Please choose a wheel size.',size);}
     if(!finishInput.value){return err('Please pick a finish / service.');}
+    if(photoUploading){return err('Hang on — your photo is still uploading.');}
     btn.disabled=true; var orig=btn.textContent; btn.textContent='SENDING...';
     fetch('https://api.web3forms.com/submit',{method:'POST',body:new FormData(form),headers:{'Accept':'application/json'}})
       .then(function(r){return r.json();})
