@@ -1023,8 +1023,12 @@ footer{
     </div>
 
     <div class="color-field" id="qfColorField" style="display:none;">
-      <label class="qf-label" for="qfColor">3 &nbsp;Color or Color Code</label>
+      <label class="qf-label" id="qfColorLabel" for="qfColor">3 &nbsp;Color or Color Code</label>
       <input class="cta-input" id="qfColor" name="color" placeholder="e.g. Gloss Black, Candy Red — or a color code (RAL / Tiger)">
+      <div id="qfColor2Wrap" style="display:none;margin-top:10px;">
+        <label class="qf-label" for="qfColor2">Color 2</label>
+        <input class="cta-input" id="qfColor2" name="color2" placeholder="Second color — name or code">
+      </div>
       <button type="button" class="qf-browse js-open-colors">Not sure? Browse colors →</button>
     </div>
 
@@ -1203,8 +1207,12 @@ footer{
   pills.forEach(function(pp){pp.addEventListener('click',function(){
     pills.forEach(function(x){x.classList.remove('active');});
     pp.classList.add('active');
-    finishInput.value=pp.getAttribute('data-finish');
+    var fin=pp.getAttribute('data-finish');
+    finishInput.value=fin;
     colorField.style.display=pp.getAttribute('data-color')==='1'?'block':'none';
+    var two=fin==='Two Tone';
+    var w2=document.getElementById('qfColor2Wrap'); if(w2) w2.style.display=two?'block':'none';
+    var lbl=document.getElementById('qfColorLabel'); if(lbl) lbl.innerHTML=two?'3 &nbsp;Color 1':'3 &nbsp;Color or Color Code';
   });});
   var photoInput=document.getElementById('qfPhoto');
   var photoStatus=document.getElementById('qfPhotoStatus');
@@ -1244,8 +1252,10 @@ footer{
     d.append('email',email.value.trim());
     d.append('wheel_size',size.value);
     d.append('finish',finishInput.value);
-    var cEl=document.getElementById('qfColor');
-    d.append('color',cEl?cEl.value.trim():'');
+    var c1El=document.getElementById('qfColor'); var c2El=document.getElementById('qfColor2'); var c2W=document.getElementById('qfColor2Wrap');
+    var colorVal=c1El?c1El.value.trim():'';
+    if(c2W && c2W.style.display!=='none' && c2El && c2El.value.trim()){ colorVal+=(colorVal?' + ':'')+c2El.value.trim(); }
+    d.append('color',colorVal);
     var mEl=form.querySelector('textarea[name="message"]');
     d.append('message',mEl?mEl.value.trim():'');
     var f=photoInput&&photoInput.files[0];
@@ -1319,7 +1329,11 @@ footer{
       if(fh) fh.value='One Tone';
     }
     if(cf) cf.style.display='block';
-    var ci=document.getElementById('qfColor'); if(ci) ci.value=value;
+    var c1=document.getElementById('qfColor'); var c2=document.getElementById('qfColor2'); var c2w=document.getElementById('qfColor2Wrap');
+    var twoVisible = c2w && c2w.style.display!=='none';
+    var ci=c1;
+    if(twoVisible){ if(c1 && !c1.value.trim()) ci=c1; else if(c2 && !c2.value.trim()) ci=c2; else ci=c2; }
+    if(ci) ci.value=value;
     closeModal();
     var q=document.getElementById('quote'); if(q) q.scrollIntoView({behavior:'smooth',block:'start'});
     if(ci) setTimeout(function(){ try{ci.focus();}catch(e){} },450);
