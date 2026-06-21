@@ -681,6 +681,17 @@ footer{
 .float-sms svg{width:28px;height:28px;fill:none;stroke:#fff;stroke-width:1.8;}
 @keyframes wa-pulse{0%,100%{box-shadow:0 4px 18px rgba(0,0,0,.45),0 0 0 0 rgba(37,211,102,.5);}50%{box-shadow:0 4px 18px rgba(0,0,0,.45),0 0 0 12px rgba(37,211,102,0);}}
 @media(max-width:600px){.float-contacts{right:16px;bottom:16px;}.float-btn{width:52px;height:52px;}}
+.color-wrap{padding:5rem 2rem;background:var(--deep);border-bottom:1px solid var(--border);text-align:center;position:relative;}
+.color-inner{max-width:760px;margin:0 auto;position:relative;z-index:1;}
+.color-sub{font-family:'Barlow',sans-serif;font-size:15px;color:var(--mist);line-height:1.65;margin:1rem auto 2rem;max-width:600px;}
+.color-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.color-btn{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.08em;padding:14px 28px;border-radius:2px;border:1px solid var(--blood);color:var(--ash);background:rgba(6,0,0,.6);transition:all .2s;text-decoration:none;}
+.color-btn:hover{border-color:var(--fire);box-shadow:0 0 20px var(--glow-soft);}
+.color-btn.primary{background:var(--fire);border-color:var(--fire);color:#fff;box-shadow:0 0 20px var(--glow);}
+.color-btn.primary:hover{background:var(--bright);box-shadow:0 0 35px rgba(255,69,0,.6);}
+.color-note{font-family:'Barlow',sans-serif;font-size:12px;color:var(--blood);margin-top:1.25rem;letter-spacing:.03em;}
+.qf-browse{display:inline-block;font-family:'Barlow',sans-serif;font-size:12px;color:var(--ember);text-decoration:none;margin:4px 2px 0;}
+.qf-browse:hover{color:var(--bright);text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -701,6 +712,7 @@ footer{
   <div class="nav-links">
     <a href="#services">Services</a>
     <a href="#gallery">Gallery</a>
+    <a href="#colors">Colors</a>
     <a href="#reviews">Reviews</a>
     <a href="#contact">Contact</a>
   </div>
@@ -937,6 +949,20 @@ footer{
   </div>
 </div>
 
+<!-- ═══ FIND YOUR COLOR ═══ -->
+<div class="color-wrap" id="colors">
+  <div class="color-inner">
+    <div class="eyebrow">Endless Options</div>
+    <h2 class="section-title">Find Your <span class="fire-text">Color</span></h2>
+    <p class="color-sub">Gloss, matte, candy, metallic, chrome — thousands of powder finishes to choose from. Browse the full color library or match a paint code, brand, or team. Find the one you love, then drop its name or code into your quote.</p>
+    <div class="color-btns">
+      <a href="https://www.prismaticpowders.com/shop/color-match" target="_blank" rel="noopener" class="color-btn primary">Color Match Tool ↗</a>
+      <a href="https://www.prismaticpowders.com/shop/powder-coating-colors" target="_blank" rel="noopener" class="color-btn">Browse All Colors ↗</a>
+    </div>
+    <p class="color-note">Powered by Prismatic Powders — our primary color line.</p>
+  </div>
+</div>
+
 <!-- ═══ CTA BANNER ═══ -->
 <div class="cta-banner" id="quote">
   <h2 class="cta-title">Ready to Get Started?</h2>
@@ -976,6 +1002,7 @@ footer{
     <div class="color-field" id="qfColorField" style="display:none;">
       <label class="qf-label" for="qfColor">3 &nbsp;Color or Color Code</label>
       <input class="cta-input" id="qfColor" name="color" placeholder="e.g. Gloss Black, Candy Red — or a color code (RAL / Tiger)">
+      <a href="https://www.prismaticpowders.com/shop/color-match" target="_blank" rel="noopener" class="qf-browse">Not sure? Browse Prismatic colors ↗</a>
     </div>
 
     <label class="qf-label">📷 Photo of Your Wheels (optional)</label>
