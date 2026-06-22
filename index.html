@@ -981,6 +981,7 @@ footer{
     <p class="color-sub">Gloss, matte, candy, metallic, chrome — thousands of powder finishes to choose from. Browse the full color library or match a paint code, brand, or team. Find the one you love, then drop its name or code into your quote.</p>
     <div class="color-btns">
       <button type="button" class="color-btn primary js-open-colors">Browse Colors</button>
+      <button type="button" class="color-btn js-open-carmatch">Match My Car Color</button>
     </div>
     <p class="color-note">Pick your color — solid, candy, metallic &amp; more — and it drops right into your quote.</p>
   </div>
@@ -1308,6 +1309,43 @@ footer{
     </div>
   </div>
 </div>
+<style>
+.cmc-box{max-width:520px;}
+.cmc-body{padding:4px 20px 22px;}
+.cmc-intro{color:var(--mist);font-size:13.5px;line-height:1.5;margin:6px 0 14px;}
+.cmc-body .cta-input{margin-top:8px;width:100%;box-sizing:border-box;}
+.cmc-row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.cmc-row3 .cta-input{margin-top:0;}
+.cmc-foot{font-size:12px;color:var(--mist);margin-top:12px;text-align:center;}
+.cmc-err{color:#ff6b6b;font-size:13px;min-height:1.1em;margin:6px 0 0;}
+.cmc-body .cta-send{margin-top:14px;width:100%;}
+@media(max-width:480px){.cmc-row3{grid-template-columns:1fr;}}
+</style>
+<div class="cm-overlay" id="carMatchModal" aria-hidden="true">
+  <div class="cm-box cmc-box" role="dialog" aria-label="Match my car color">
+    <div class="cm-head">
+      <h3 class="cm-title">Match My <span class="fire-text">Car Color</span></h3>
+      <button type="button" class="cm-close" id="cmcClose" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="cmc-body">
+      <p class="cmc-intro">Tell us your car's color and we'll match it to powder. The more you give us, the closer the match — give us at least the paint code, color name, or make &amp; model.</p>
+      <div class="cmc-row3">
+        <input class="cta-input" id="cmcYear" type="text" inputmode="numeric" placeholder="Year" autocomplete="off">
+        <input class="cta-input" id="cmcMake" type="text" placeholder="Make" autocomplete="off">
+        <input class="cta-input" id="cmcModel" type="text" placeholder="Model" autocomplete="off">
+      </div>
+      <input class="cta-input" id="cmcCode" type="text" placeholder="Paint code if you know it (e.g. M7, WA9075)" autocomplete="off">
+      <input class="cta-input" id="cmcName" type="text" placeholder="Color name (e.g. Grabber Blue)" autocomplete="off">
+      <textarea class="cta-input" id="cmcNotes" rows="2" placeholder="Notes — finish (gloss/matte/metallic), how exact it must be…"></textarea>
+      <label class="qf-label">📷 Photo of your car or part (optional — helps a lot)</label>
+      <input type="file" id="cmcPhoto" accept="image/*" class="cta-input qf-file">
+      <p class="qf-photo-status" id="cmcPhotoStatus" aria-live="polite"></p>
+      <p class="cmc-err" id="cmcErr" aria-live="polite"></p>
+      <button type="button" class="cta-send" id="cmcAdd">ADD TO MY QUOTE →</button>
+      <p class="cmc-foot">We'll confirm the exact match with a physical sample before coating.</p>
+    </div>
+  </div>
+</div>
 <script>
 (function(){
   var overlay=document.getElementById('colorModal'); if(!overlay) return;
@@ -1399,6 +1437,48 @@ footer{
   }
   applyFilter('');
   document.getElementById('cmSearch').addEventListener('input',function(){ applyFilter(this.value); });
+})();
+</script>
+<script>
+(function(){
+  var modal=document.getElementById('carMatchModal'); if(!modal) return;
+  function openM(){ modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; var y=document.getElementById('cmcYear'); if(y) setTimeout(function(){try{y.focus();}catch(e){}},400); }
+  function closeM(){ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
+  [].slice.call(document.querySelectorAll('.js-open-carmatch')).forEach(function(b){ b.addEventListener('click',function(e){ e.preventDefault(); openM(); }); });
+  var cl=document.getElementById('cmcClose'); if(cl) cl.addEventListener('click',closeM);
+  modal.addEventListener('click',function(e){ if(e.target===modal) closeM(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && modal.classList.contains('open')) closeM(); });
+  var photo=document.getElementById('cmcPhoto'), pstat=document.getElementById('cmcPhotoStatus');
+  if(photo){ photo.addEventListener('change',function(){
+    var f=photo.files[0];
+    if(!f){ pstat.textContent=''; pstat.className='qf-photo-status'; return; }
+    if(f.size>15*1024*1024){ pstat.textContent='That photo is over 15MB — please pick a smaller one.'; pstat.className='qf-photo-status err'; photo.value=''; return; }
+    pstat.textContent='✓ Photo ready: '+f.name; pstat.className='qf-photo-status ok';
+  }); }
+  function val(id){ var e=document.getElementById(id); return e?e.value.trim():''; }
+  var addBtn=document.getElementById('cmcAdd');
+  if(addBtn) addBtn.addEventListener('click',function(){
+    var errEl=document.getElementById('cmcErr'); if(errEl) errEl.textContent='';
+    var year=val('cmcYear'), make=val('cmcMake'), model=val('cmcModel'), code=val('cmcCode'), cname=val('cmcName'), notes=val('cmcNotes');
+    if(!code && !cname && !make){ if(errEl) errEl.textContent='Add at least a paint code, color name, or the make of your car.'; return; }
+    var veh=[year,make,model].filter(function(x){return x;}).join(' ');
+    var segs=[]; if(veh) segs.push(veh); if(cname) segs.push(cname); if(code) segs.push('code '+code);
+    var colorStr='Color match: '+segs.join(' — ');
+    var qfColor=document.getElementById('qfColor'); if(qfColor) qfColor.value=colorStr;
+    var fh=document.getElementById('qfFinish');
+    var pills=[].slice.call(document.querySelectorAll('#qfFinishGrid .finish-pill'));
+    pills.forEach(function(pp){ if(pp.getAttribute('data-finish')==='One Tone'){pp.classList.add('active');} else {pp.classList.remove('active');} });
+    if(fh) fh.value='One Tone';
+    var cfield=document.getElementById('qfColorField'); if(cfield) cfield.style.display='block';
+    var c2w=document.getElementById('qfColor2Wrap'); if(c2w) c2w.style.display='none';
+    var lbl=document.getElementById('qfColorLabel'); if(lbl) lbl.innerHTML='3 &nbsp;Color or Color Code';
+    if(notes){ var msg=document.querySelector('#quoteForm textarea[name="message"]'); if(msg){ msg.value=(msg.value.trim()?msg.value.trim()+'\n':'')+'Color match notes: '+notes; } }
+    var f=photo&&photo.files[0];
+    if(f){ try{ var qp=document.getElementById('qfPhoto'); if(qp){ var dt=new DataTransfer(); dt.items.add(f); qp.files=dt.files; qp.dispatchEvent(new Event('change',{bubbles:true})); } }catch(e){} }
+    closeM();
+    var q=document.getElementById('quote'); if(q) q.scrollIntoView({behavior:'smooth',block:'start'});
+    setTimeout(function(){ try{ document.getElementById('qfName').focus({preventScroll:true}); }catch(e){} },500);
+  });
 })();
 </script>
 </body>
