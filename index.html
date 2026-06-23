@@ -1306,6 +1306,7 @@ footer{
           var on=document.getElementById('qsOrderNo'); if(on) on.textContent=orderNo;
           form.style.display='none';
           var qs=document.getElementById('quoteSuccess');
+          document.body.appendChild(qs);
           qs.style.display='block';
           qs.classList.add('qs-fullscreen');
           document.body.style.overflow='hidden';
