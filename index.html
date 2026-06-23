@@ -1489,5 +1489,48 @@ footer{
   });
 })();
 </script>
+<style>
+.pg-steps{margin:8px 0 18px;padding-left:22px;color:var(--ash);font-family:'Barlow',sans-serif;font-size:14.5px;line-height:1.7;}
+.pg-steps li{margin-bottom:7px;}
+.pg-steps strong{color:var(--ember);}
+#pgGo{display:block;text-align:center;text-decoration:none;width:100%;box-sizing:border-box;}
+#pgCancel{display:block;margin:12px auto 0;}
+.pg-intro{color:var(--mist);font-size:13.5px;margin:2px 0 4px;}
+</style>
+<div class="cm-overlay" id="prismaticGate" aria-hidden="true" style="z-index:3000;">
+  <div class="cm-box cmc-box" role="dialog" aria-label="Open Prismatic color catalog" style="max-width:460px;">
+    <div class="cm-head">
+      <h3 class="cm-title">Find Your <span class="fire-text">Color</span></h3>
+      <button type="button" class="cm-close" id="pgClose" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="cmc-body">
+      <p class="pg-intro">Here's how to pick your exact color:</p>
+      <ol class="pg-steps">
+        <li>We'll open <strong>Prismatic's</strong> color catalog in a <strong>new tab</strong>.</li>
+        <li>Find your color and <strong>copy its name or item number</strong>.</li>
+        <li>Come back to this tab and <strong>paste it in the color box</strong>.</li>
+      </ol>
+      <a id="pgGo" class="cta-send" href="#" target="_blank" rel="noopener noreferrer">Open Prismatic →</a>
+      <button type="button" class="qf-browse" id="pgCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var gate=document.getElementById('prismaticGate'); if(!gate) return;
+  var go=document.getElementById('pgGo');
+  function openGate(url){ go.href=url; gate.classList.add('open'); gate.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; }
+  function closeGate(){ gate.classList.remove('open'); gate.setAttribute('aria-hidden','true'); var other=document.querySelector('.cm-overlay.open'); if(!other) document.body.style.overflow=''; }
+  var cl=document.getElementById('pgClose'); if(cl) cl.addEventListener('click',closeGate);
+  var cn=document.getElementById('pgCancel'); if(cn) cn.addEventListener('click',closeGate);
+  gate.addEventListener('click',function(e){ if(e.target===gate) closeGate(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && gate.classList.contains('open')) closeGate(); });
+  go.addEventListener('click',function(){ setTimeout(closeGate,60); });
+  [].slice.call(document.querySelectorAll('a[href*="prismaticpowders.com"]')).forEach(function(a){
+    if(a.id==='pgGo') return;
+    a.addEventListener('click',function(e){ e.preventDefault(); openGate(a.href); });
+  });
+})();
+</script>
 </body>
 </html>
