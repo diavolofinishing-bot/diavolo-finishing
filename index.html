@@ -1058,6 +1058,7 @@ footer{
       <div style="font-size:12.5px;color:var(--ash);margin-top:6px;">Save this number — use it to follow up with us on your order.</div>
     </div>
     <p>Thanks - we got it. We'll reach out same day during business hours. Need it faster? Call <a href="tel:+13238411995" style="color:var(--fire);">(323) 841-1995</a>.</p>
+    <button type="button" class="cta-send" id="qsBack" style="max-width:260px;margin:18px auto 0;">Back to site</button>
   </div>
 </div>
 
@@ -1257,6 +1258,7 @@ footer{
     }catch(e){cb(null);}
   }
   function postLog(d){ try{ fetch(SHEET_LOG_URL,{method:'POST',mode:'no-cors',body:d}); }catch(e){} }
+  var qsBack=document.getElementById('qsBack'); if(qsBack) qsBack.addEventListener('click',function(){ location.reload(); });
   function genOrderNo(){
     var dt=new Date(); function p(n){return ('0'+n).slice(-2);}
     var ymd=String(dt.getFullYear()).slice(2)+p(dt.getMonth()+1)+p(dt.getDate());
@@ -1265,7 +1267,6 @@ footer{
   function logToSheet(orderNo){
     if(!SHEET_LOG_URL || SHEET_LOG_URL.indexOf('http')!==0) return;
     var d=new URLSearchParams();
-    d.append('order_number',orderNo||'');
     d.append('name',name.value.trim());
     d.append('phone',phone.value.trim());
     d.append('email',email.value.trim());
@@ -1277,6 +1278,7 @@ footer{
     d.append('color',colorVal);
     var mEl=form.querySelector('textarea[name="message"]');
     d.append('message',mEl?mEl.value.trim():'');
+    d.append('order_number',orderNo||'');
     var f=photoInput&&photoInput.files[0];
     if(f){ resizeToBase64(f,function(b64){ if(b64){ d.append('photo_b64',b64); d.append('photo_name',f.name||'wheel.jpg'); d.append('photo_type','image/jpeg'); } postLog(d); }); }
     else { postLog(d); }
@@ -1303,7 +1305,11 @@ footer{
         if(j && j.success){
           var on=document.getElementById('qsOrderNo'); if(on) on.textContent=orderNo;
           form.style.display='none';
-          document.getElementById('quoteSuccess').style.display='block';
+          var qs=document.getElementById('quoteSuccess');
+          qs.style.display='block';
+          qs.classList.add('qs-fullscreen');
+          document.body.style.overflow='hidden';
+          window.scrollTo(0,0);
         } else {
           err('Something went wrong. Please call (323) 841-1995.');
           btn.disabled=false; btn.textContent=orig;
@@ -1512,6 +1518,8 @@ footer{
 #pgGo{display:block;text-align:center;text-decoration:none;width:100%;box-sizing:border-box;}
 #pgCancel{display:block;margin:12px auto 0;}
 .pg-intro{color:var(--mist);font-size:13.5px;margin:2px 0 4px;}
+.qs-fullscreen{position:fixed!important;inset:0;z-index:5000;background:#0a0000;display:flex!important;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px 20px;overflow:auto;}
+.qs-fullscreen .qs-icon{font-size:46px;}
 </style>
 <div class="cm-overlay" id="prismaticGate" aria-hidden="true" style="z-index:3000;">
   <div class="cm-box cmc-box" role="dialog" aria-label="Open Prismatic color catalog" style="max-width:460px;">
