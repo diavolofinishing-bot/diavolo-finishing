@@ -692,6 +692,10 @@ footer{
 .color-note{font-family:'Barlow',sans-serif;font-size:12px;color:var(--blood);margin-top:1.25rem;letter-spacing:.03em;}
 .qf-browse{display:inline-block;background:none;border:none;padding:0;cursor:pointer;font-family:'Barlow',sans-serif;font-size:12px;color:var(--ember);text-decoration:none;margin:6px 2px 0;}
 .qf-browse:hover{color:var(--bright);text-decoration:underline;}
+.qf-prismatic-hint{font-size:11.5px;color:var(--mist);margin:4px 2px 0;line-height:1.45;}
+.cm-prismatic{margin:12px 20px 0;padding:11px 14px;background:rgba(196,17,0,.10);border:1px solid var(--blood);border-radius:3px;font-family:'Barlow',sans-serif;font-size:13px;color:var(--ash);line-height:1.5;}
+.cm-prismatic a{color:var(--ember);font-weight:600;text-decoration:none;}
+.cm-prismatic a:hover{color:var(--bright);text-decoration:underline;}
 .cm-overlay{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.85);display:none;align-items:flex-start;justify-content:center;padding:4vh 14px;}
 .cm-overlay.open{display:flex;}
 .cm-box{background:#0D0000;border:1px solid var(--blood);border-radius:6px;max-width:880px;width:100%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 0 60px rgba(0,0,0,.8);}
@@ -1025,13 +1029,15 @@ footer{
 
     <div class="color-field" id="qfColorField" style="display:none;">
       <label class="qf-label" id="qfColorLabel" for="qfColor">3 &nbsp;Color or Color Code</label>
-      <input class="cta-input" id="qfColor" name="color" placeholder="e.g. Gloss Black, Candy Red — or a color code (RAL / Tiger)">
+      <input class="cta-input" id="qfColor" name="color" placeholder="Paste a Prismatic color name/number, or type e.g. Gloss Black, RAL 5015">
       <div id="qfColor2Wrap" style="display:none;margin-top:10px;">
         <label class="qf-label" for="qfColor2">Color 2</label>
         <input class="cta-input" id="qfColor2" name="color2" placeholder="Second color — name or code">
       </div>
       <button type="button" class="qf-browse js-open-colors">Not sure? Browse colors →</button>
       <button type="button" class="qf-browse js-open-carmatch">Match my car color →</button>
+      <a class="qf-browse" href="https://www.prismaticpowders.com/shop/powder-coating-colors" target="_blank" rel="noopener noreferrer">Browse all colors at Prismatic →</a>
+      <p class="qf-prismatic-hint">Opens the full Prismatic catalog in a new tab — find your color, copy its <strong>name or number</strong>, and paste it in the box above.</p>
     </div>
 
     <label class="qf-label">📷 Photo of Your Wheels (optional)</label>
@@ -1301,6 +1307,7 @@ footer{
       <button type="button" class="cm-close" id="cmClose" aria-label="Close">&#10005;</button>
     </div>
     <input type="text" id="cmSearch" class="cm-search" placeholder="Search color name, RAL, or car paint code…">
+    <div class="cm-prismatic">Want a specific Prismatic color? <a href="https://www.prismaticpowders.com/shop/powder-coating-colors" target="_blank" rel="noopener noreferrer">Open the full catalog →</a> — then copy the color's name or number into your quote.</div>
     <div class="cm-body">
       <div class="cm-section" id="cmPopularSec"><div class="cm-sec-title">Popular Finishes</div><div class="cm-grid" id="cmPopular"></div></div>
       <div class="cm-section" id="cmAutoSec"><div class="cm-sec-title">Automotive Colors — search by name or paint code</div><div class="cm-grid" id="cmAuto"></div></div>
