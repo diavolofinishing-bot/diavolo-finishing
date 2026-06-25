@@ -31,6 +31,15 @@ button{cursor:pointer;border:none;border-radius:6px;padding:10px 16px;font-size:
 .tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;}
 .tab{background:var(--card);border:1px solid var(--border);color:var(--ash);font-size:13px;padding:8px 14px;border-radius:20px;}
 .tab.active{background:var(--fire);color:#fff;border-color:var(--fire);}
+.tab.back{background:transparent;color:var(--mist);border-color:var(--border);}
+.tab.back:hover{color:var(--ash);}
+.home{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px;}
+@media(max-width:640px){.home{grid-template-columns:1fr;}}
+.home-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:34px 24px;text-align:center;cursor:pointer;transition:border-color .15s,transform .15s;}
+.home-card:hover{border-color:var(--fire);transform:translateY(-2px);}
+.hc-ico{font-size:42px;line-height:1;margin-bottom:12px;}
+.hc-t{font-size:22px;font-weight:700;color:var(--ash);margin-bottom:6px;}
+.hc-s{font-size:13px;color:var(--mist);max-width:240px;margin:0 auto;line-height:1.4;}
 .card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
@@ -96,8 +105,7 @@ async function showDash(){
   document.getElementById('login').classList.add('hidden');
   document.getElementById('dash').classList.remove('hidden');
   document.getElementById('who').textContent=data.user.email;
-  renderTabs();
-  selectTab('orders');
+  goHome();
 }
 
 // ---- Config ----
@@ -143,17 +151,37 @@ const LISTS={
     {k:'caption',t:'text',l:'Caption'},{k:'sort',t:'number',l:'Order'},{k:'active',t:'bool',l:'Show'}]}
 };
 
-function renderTabs(){
+// ---- Two-level navigation: Home → (Orders | Edit Website) ----
+function goHome(){
+  document.getElementById('tabs').innerHTML='';
+  var p=document.getElementById('panel');
+  p.innerHTML='<div class="home">'
+    +'<button class="home-card" data-go="orders"><div class="hc-ico">📋</div><div class="hc-t">Orders</div><div class="hc-s">View &amp; manage customer quote requests</div></button>'
+    +'<button class="home-card" data-go="editor"><div class="hc-ico">🛠️</div><div class="hc-t">Edit Website</div><div class="hc-s">Contact, services, reviews, colors, gallery, before/after &amp; videos</div></button>'
+    +'</div>';
+  p.querySelector('[data-go="orders"]').onclick=openOrders;
+  p.querySelector('[data-go="editor"]').onclick=openEditor;
+}
+function backBtn(){var b=document.createElement('button');b.className='tab back';b.textContent='← Home';b.onclick=goHome;return b;}
+function openOrders(){
   var c=document.getElementById('tabs');c.innerHTML='';
+  c.appendChild(backBtn());
+  renderOrders();
+}
+function openEditor(){
+  var c=document.getElementById('tabs');c.innerHTML='';
+  c.appendChild(backBtn());
   TABS.forEach(function(t){
+    if(t.key==='orders')return;
     var b=document.createElement('button');b.className='tab';b.textContent=t.label;b.dataset.key=t.key;
     b.onclick=function(){selectTab(t.key);};
     c.appendChild(b);
   });
+  selectTab('settings');
 }
 function selectTab(key){
   [].forEach.call(document.querySelectorAll('.tab'),function(b){b.classList.toggle('active',b.dataset.key===key);});
-  if(key==='settings')renderSettings();else if(key==='orders')renderOrders();else renderList(key);
+  if(key==='settings')renderSettings();else renderList(key);
 }
 
 // ---- Settings editor ----
