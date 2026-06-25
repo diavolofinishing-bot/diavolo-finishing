@@ -1131,7 +1131,7 @@ footer{
         </div>
         <div>
           <div class="info-label">Text Us</div>
-          <div class="info-val big">(323) 841-1995</div>
+          <div class="info-val big" data-setting="phone">(323) 841-1995</div>
         </div>
       </a>
       <a href="https://instagram.com/diavolo_finishing" target="_blank" class="info-card">
@@ -1140,7 +1140,7 @@ footer{
         </div>
         <div>
           <div class="info-label">Instagram</div>
-          <div class="info-val">@diavolo_finishing</div>
+          <div class="info-val" data-setting="instagram">@diavolo_finishing</div>
         </div>
       </a>
       <div class="info-card">
@@ -1149,7 +1149,7 @@ footer{
         </div>
         <div>
           <div class="info-label">Hours</div>
-          <div class="info-val">Mon – Sat &nbsp;·&nbsp; 8:00 AM – 6:00 PM</div>
+          <div class="info-val" data-setting="hours">Mon – Sat &nbsp;·&nbsp; 8:00 AM – 6:00 PM</div>
         </div>
       </div>
       <div class="info-card">
@@ -1158,10 +1158,10 @@ footer{
         </div>
         <div>
           <div class="info-label">Location</div>
-          <div class="info-val">North Hills, Los Angeles, CA</div>
+          <div class="info-val" data-setting="address">North Hills, Los Angeles, CA</div>
         </div>
       </div>
-      <a href="https://maps.google.com/?q=Diavolo+Finishing+North+Hills+Los+Angeles" target="_blank">
+      <a href="https://maps.google.com/?q=Diavolo+Finishing+North+Hills+Los+Angeles" target="_blank" data-setting-map="address">
         <button class="dir-btn">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z"/></svg>
           Get Directions on Google Maps
@@ -1199,7 +1199,7 @@ footer{
           Google Pay
         </div>
       </div>
-      <p class="payment-note">Payment collected at pickup. No deposit required for standard jobs.<br>Large orders may require 50% down — we'll let you know upfront.</p>
+      <p class="payment-note" data-setting="payment_note">Payment collected at pickup. No deposit required for standard jobs.<br>Large orders may require 50% down — we'll let you know upfront.</p>
       <div style="margin-top:2.5rem;border-top:1px solid var(--border);padding-top:2rem;">
         <div class="eyebrow" style="justify-content:flex-start;">Follow The Work</div>
         <p style="font-size:13px;color:var(--mist);margin-bottom:1.25rem;">Every job posted on Instagram. See what we're working on.</p>
@@ -1616,6 +1616,27 @@ footer{
     if(a.id==='pgGo') return;
     a.addEventListener('click',function(e){ e.preventDefault(); openGate(a.href); });
   });
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ── Live content from Supabase (admin dashboard) ── */
+(function(){
+  try{
+    var sb=supabase.createClient('https://geqcmsanojmucaiysmaf.supabase.co','sb_publishable_8zWY_Evi24ru1K3UebA1lQ_eYC21ecy');
+    sb.from('settings').select('*').then(function(res){
+      if(res.error||!res.data) return;
+      var m={}; res.data.forEach(function(r){ m[r.key]=r.value; });
+      document.querySelectorAll('[data-setting]').forEach(function(el){
+        var v=m[el.getAttribute('data-setting')];
+        if(v!=null && v!=='') el.textContent=v;
+      });
+      document.querySelectorAll('[data-setting-map]').forEach(function(el){
+        var v=m[el.getAttribute('data-setting-map')];
+        if(v) el.setAttribute('href','https://maps.google.com/?q='+encodeURIComponent(v));
+      });
+    });
+  }catch(e){}
 })();
 </script>
 </body>
