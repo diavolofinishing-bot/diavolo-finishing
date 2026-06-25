@@ -986,6 +986,10 @@ footer{
 .vid-item{background:#000;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
 .vid-item video{width:100%;display:block;background:#000;object-fit:cover;}
 .vid-cap{padding:9px 13px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ash);}
+.vid-frame{position:relative;line-height:0;}
+.vid-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:rgba(196,17,0,.92);color:#fff;border:2px solid rgba(255,255,255,.85);font-size:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 22px rgba(0,0,0,.55);transition:opacity .2s,transform .2s;padding-left:5px;}
+.vid-play:hover{transform:translate(-50%,-50%) scale(1.09);}
+.vid-frame.playing .vid-play{opacity:0;pointer-events:none;}
 </style>
 <div class="vid-wrap" id="videos" style="display:none;">
   <div style="max-width:1100px;margin:0 auto;text-align:center;">
@@ -1726,8 +1730,15 @@ footer{
       var ar=String(v.aspect||'16:9').replace(':',' / ');
       var poster=v.poster_url?(' poster="'+attr(v.poster_url)+'"'):'';
       var pre=v.poster_url?'none':'metadata';
-      return '<div class="vid-item"><video src="'+attr(v.video_url)+'"'+poster+' controls preload="'+pre+'" playsinline style="aspect-ratio:'+ar+'"></video>'+(v.caption?'<div class="vid-cap">'+esc(v.caption)+'</div>':'')+'</div>';
+      return '<div class="vid-item"><div class="vid-frame"><video src="'+attr(v.video_url)+'"'+poster+' controls preload="'+pre+'" playsinline style="aspect-ratio:'+ar+'"></video><button class="vid-play" aria-label="Play video">&#9658;</button></div>'+(v.caption?'<div class="vid-cap">'+esc(v.caption)+'</div>':'')+'</div>';
     }).join('');
+    [].forEach.call(grid.querySelectorAll('.vid-frame'),function(fr){
+      var vid=fr.querySelector('video'), btn=fr.querySelector('.vid-play');
+      if(btn)btn.addEventListener('click',function(){vid.play();});
+      vid.addEventListener('play',function(){fr.classList.add('playing');});
+      vid.addEventListener('pause',function(){fr.classList.remove('playing');});
+      vid.addEventListener('ended',function(){fr.classList.remove('playing');});
+    });
     sec.style.display='';
   });
 })();
