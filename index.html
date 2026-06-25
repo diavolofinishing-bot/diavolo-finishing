@@ -389,7 +389,7 @@ nav {
 .gallery-item{
   background:rgba(20,0,0,.8);border:1px solid var(--border);border-radius:3px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  min-height:180px;gap:10px;position:relative;overflow:hidden;
+  min-height:180px;aspect-ratio:1/1;gap:10px;position:relative;overflow:hidden;
   transition:border-color .25s,box-shadow .25s;
 }
 .gal-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;}
@@ -906,39 +906,21 @@ footer{
 <div class="gallery-wrap" id="gallery">
   <div style="max-width:1100px;margin:0 auto 3rem;text-align:center;">
     <div class="eyebrow">Our Work</div>
-    <h2 class="section-title chrome">Before &amp; After</h2>
+    <h2 class="section-title chrome">Recent Wheels</h2>
   </div>
   <div class="gallery-grid">
-    <div class="gallery-item tall">
-      <img class="gal-photo" src="images/featured.jpg" alt="Featured — Best Job" loading="lazy" onerror="this.remove()">
-      <div class="gal-icon">📷</div>
-      <div class="gal-label">Featured — Best Job</div>
-      <div class="gal-caption">Featured — Best Job</div>
-    </div>
-    <div class="gallery-item">
-      <img class="gal-photo" src="images/wheels.jpg" alt="Wheel Refinish" loading="lazy" onerror="this.remove()">
-      <div class="gal-icon">🔧</div>
-      <div class="gal-label">Wheel Refinish</div>
-      <div class="gal-caption">Wheel Refinish</div>
-    </div>
-    <div class="gallery-item">
-      <img class="gal-photo" src="images/gate.jpg" alt="Gate / Fence" loading="lazy" onerror="this.remove()">
-      <div class="gal-icon">🚪</div>
-      <div class="gal-label">Gate / Fence</div>
-      <div class="gal-caption">Gate / Fence</div>
-    </div>
-    <div class="gallery-item wide">
-      <img class="gal-photo" src="images/custom.jpg" alt="Custom Color Build" loading="lazy" onerror="this.remove()">
-      <div class="gal-icon">🎨</div>
-      <div class="gal-label">Custom Color Build</div>
-      <div class="gal-caption">Custom Color Build</div>
-    </div>
-    <div class="gallery-item">
-      <img class="gal-photo" src="images/polish.jpg" alt="High Polish" loading="lazy" onerror="this.remove()">
-      <div class="gal-icon">✨</div>
-      <div class="gal-label">High Polish</div>
-      <div class="gal-caption">High Polish</div>
-    </div>
+    <div class="gallery-item"><img class="gal-photo" src="images/g01.jpg" alt="Gloss black powder coated wheel" loading="lazy"><div class="gal-caption">Gloss Black</div></div>
+    <div class="gallery-item"><img class="gal-photo" src="images/g02.jpg" alt="Machined black powder coated wheel" loading="lazy"><div class="gal-caption">Machined Black</div></div>
+    <div class="gallery-item"><img class="gal-photo" src="images/g03.jpg" alt="Gloss black multi-spoke wheel" loading="lazy"><div class="gal-caption">Gloss Black</div></div>
+    <div class="gallery-item"><img class="gal-photo" src="images/g04.jpg" alt="Gunmetal machined wheel" loading="lazy"><div class="gal-caption">Gunmetal Machined</div></div>
+    <div class="gallery-item"><img class="gal-photo" src="images/g05.jpg" alt="Gunmetal finished wheel" loading="lazy"><div class="gal-caption">Gunmetal</div></div>
+    <div class="gallery-item"><img class="gal-photo" src="images/g06.jpg" alt="Gunmetal mesh wheel" loading="lazy"><div class="gal-caption">Gunmetal Mesh</div></div>
+    <div class="gallery-item"><img class="gal-photo" src="images/g07.jpg" alt="Candy bronze custom wheel" loading="lazy"><div class="gal-caption">Candy Bronze</div></div>
+    <div class="gallery-item"><img class="gal-photo" src="images/g08.jpg" alt="Bronze machined wheel" loading="lazy"><div class="gal-caption">Bronze Machined</div></div>
+    <div class="gallery-item"><img class="gal-photo" src="images/g09.jpg" alt="Black wheel with yellow accents" loading="lazy"><div class="gal-caption">Black &amp; Yellow</div></div>
+    <div class="gallery-item"><img class="gal-photo" src="images/g10.jpg" alt="Black wheel with red accents" loading="lazy"><div class="gal-caption">Black &amp; Red</div></div>
+    <div class="gallery-item"><img class="gal-photo" src="images/g11.jpg" alt="Wheel stripped to bare metal" loading="lazy"><div class="gal-caption">Stripped to Bare Metal</div></div>
+    <div class="gallery-item"><img class="gal-photo" src="images/g12.jpg" alt="Bare metal wheel prep" loading="lazy"><div class="gal-caption">Bare Metal Prep</div></div>
   </div>
 </div>
 
