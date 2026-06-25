@@ -290,13 +290,23 @@ function bindCards(table,cfg){
 
 // ---- Orders dashboard ----
 var ORDER_STATUSES=['New','Contacted','Quoted','In Progress','Done'];
+var ORDERS={};
 function eT(s){var d=document.createElement('div');d.textContent=(s==null?'':s);return d.innerHTML;}
 function eA(s){return String(s==null?'':s).replace(/"/g,'&quot;');}
+async function callInvoiceFn(payload){
+  var s=await sb.auth.getSession();
+  var tok=s.data&&s.data.session?s.data.session.access_token:'';
+  try{
+    var r=await fetch(SB_URL+'/functions/v1/stripe-invoice',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok,'apikey':SB_KEY},body:JSON.stringify(payload)});
+    return await r.json();
+  }catch(e){return {error:String(e.message||e)};}
+}
 async function renderOrders(){
   var p=document.getElementById('panel'); p.innerHTML='<div class="muted">Loading…</div>';
   var r=await sb.from('orders').select('*').order('created_at',{ascending:false});
   if(r.error){p.innerHTML='<div class="muted">Error: '+r.error.message+'</div>';return;}
   if(!r.data||!r.data.length){p.innerHTML='<div class="muted">No orders yet. New quote requests from your website will show up here automatically.</div>';return;}
+  ORDERS={}; r.data.forEach(function(o){ORDERS[o.id]=o;});
   p.innerHTML='<div class="muted" style="margin-bottom:12px">'+r.data.length+' order(s) — newest first</div>'+r.data.map(orderCard).join('');
   bindOrders();
 }
@@ -317,20 +327,80 @@ function orderCard(o){
     +'</div>'
     +'<label>Message</label><div class="muted">'+eT(o.message||'—')+'</div>'
     +'<label>Photo</label><div>'+photo+'</div>'
-    +'<label>Internal notes</label><textarea data-of="notes" rows="2">'+eT(o.notes||'')+'</textarea>'
+    +'<div style="border-top:1px solid var(--border);margin:14px 0 8px"></div>'
+    +'<label>💳 Payment</label>'
+    +payBlock(o)
+    +'<label style="margin-top:12px;display:block">Internal notes</label><textarea data-of="notes" rows="2">'+eT(o.notes||'')+'</textarea>'
     +'<button class="btn" data-save-order style="margin-top:10px">Save</button>'
   +'</div>';
+}
+function payBlock(o){
+  var price=o.price!=null?o.price:'';
+  var amt=o.amount_due!=null?o.amount_due:'';
+  var ct=o.charge_type||'Full amount';
+  var sel=['Full amount','Deposit 50%','Deposit 25%','Custom'].map(function(s){return '<option '+(ct===s?'selected':'')+'>'+s+'</option>';}).join('');
+  var invHtml='';
+  if(o.invoice_url){
+    var st=o.invoice_status||'open';
+    var label=st==='paid'?'PAID ✓':(st==='void'?'Voided':'Sent — awaiting payment');
+    var color=st==='paid'?'#3ecf8e':(st==='void'?'var(--mist)':'#e0a000');
+    invHtml='<div style="margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:6px">'
+      +'<div>Invoice status: <b style="color:'+color+'">'+label+'</b>'+(o.amount_due!=null?(' &nbsp;($'+Number(o.amount_due).toFixed(2)+')'):'')+'</div>'
+      +'<div style="margin-top:6px"><a href="'+eA(o.invoice_url)+'" target="_blank">View / pay invoice ↗</a></div>'
+      +'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
+        +'<button class="tab" data-inv-refresh>Refresh status</button>'
+        +((st!=='void'&&st!=='paid')?'<button class="tab" data-inv-void>Void</button>':'')
+      +'</div></div>';
+  }
+  return '<div class="row2" style="margin-top:6px">'
+      +'<div><label>Job price ($)</label><input type="number" step="0.01" min="0" data-of="price" value="'+eA(price)+'" placeholder="e.g. 400"></div>'
+      +'<div><label>Charge</label><select data-of="charge_type">'+sel+'</select></div>'
+      +'<div><label>Amount to invoice ($)</label><input type="number" step="0.01" min="0" data-of="amount_due" value="'+eA(amt)+'" placeholder="auto"></div>'
+    +'</div>'
+    +'<button class="btn" data-send-invoice style="margin-top:10px">'+(o.invoice_url?'Create new invoice':'Create &amp; email Stripe invoice')+'</button>'
+    +invHtml;
+}
+function recalcAmount(card){
+  var ct=card.querySelector('[data-of="charge_type"]').value;
+  if(ct==='Custom')return;
+  var price=parseFloat(card.querySelector('[data-of="price"]').value)||0;
+  var a=ct==='Deposit 50%'?price*0.5:(ct==='Deposit 25%'?price*0.25:price);
+  card.querySelector('[data-of="amount_due"]').value=a?a.toFixed(2):'';
 }
 function bindOrders(){
   [].forEach.call(document.querySelectorAll('#panel .card'),function(card){
     var id=card.dataset.id; var b=card.querySelector('[data-save-order]');
+    var priceEl=card.querySelector('[data-of="price"]'), ctEl=card.querySelector('[data-of="charge_type"]');
+    if(priceEl)priceEl.addEventListener('input',function(){recalcAmount(card);});
+    if(ctEl)ctEl.addEventListener('change',function(){recalcAmount(card);});
     if(b)b.onclick=async function(){
       b.classList.add('saving');
-      var patch={status:card.querySelector('[data-of="status"]').value, notes:card.querySelector('[data-of="notes"]').value};
+      var pr=parseFloat(priceEl.value), am=parseFloat(card.querySelector('[data-of="amount_due"]').value);
+      var patch={status:card.querySelector('[data-of="status"]').value, notes:card.querySelector('[data-of="notes"]').value,
+        price:isNaN(pr)?null:pr, charge_type:ctEl.value, amount_due:isNaN(am)?null:am};
       var r=await sb.from('orders').update(patch).eq('id',id);
       b.classList.remove('saving');
       toast(r.error?('Error: '+r.error.message):'Saved ✓');
     };
+    var sendBtn=card.querySelector('[data-send-invoice]');
+    if(sendBtn)sendBtn.onclick=async function(){
+      var o=ORDERS[id]||{};
+      var amount=parseFloat(card.querySelector('[data-of="amount_due"]').value)||0;
+      if(!o.email){toast('This customer has no email on file — can’t send an invoice.');return;}
+      if(amount<0.5){toast('Enter the price / amount first.');return;}
+      if(!confirm('Email a Stripe invoice for $'+amount.toFixed(2)+' to '+o.email+'?'))return;
+      sendBtn.disabled=true;var old=sendBtn.innerHTML;sendBtn.textContent='Sending…';
+      var pr=parseFloat(priceEl.value);
+      var desc='Diavolo Finishing — '+(o.order_number||('Order '+id))+(o.color?(' — '+o.color):'');
+      var res=await callInvoiceFn({action:'create',order_id:id,amount_cents:Math.round(amount*100),email:o.email,name:o.name,description:desc,charge_type:ctEl.value,price:isNaN(pr)?null:pr});
+      sendBtn.disabled=false;sendBtn.innerHTML=old;
+      if(res&&res.error){toast('Error: '+res.error);return;}
+      toast('Invoice emailed to '+o.email+' ✓');renderOrders();
+    };
+    var rf=card.querySelector('[data-inv-refresh]');
+    if(rf)rf.onclick=async function(){var o=ORDERS[id]||{};rf.textContent='…';var res=await callInvoiceFn({action:'status',order_id:id,invoice_id:o.invoice_id});if(res&&res.error){toast('Error: '+res.error);rf.textContent='Refresh status';}else{toast('Status: '+res.invoice_status);renderOrders();}};
+    var vd=card.querySelector('[data-inv-void]');
+    if(vd)vd.onclick=async function(){var o=ORDERS[id]||{};if(!confirm('Void this invoice? The customer will no longer be able to pay it.'))return;var res=await callInvoiceFn({action:'void',order_id:id,invoice_id:o.invoice_id});if(res&&res.error){toast('Error: '+res.error);}else{toast('Invoice voided');renderOrders();}};
   });
 }
 
