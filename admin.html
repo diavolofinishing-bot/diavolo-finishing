@@ -107,7 +107,8 @@ const TABS=[
   {key:'reviews',label:'Reviews'},
   {key:'colors',label:'Colors'},
   {key:'gallery',label:'Gallery'},
-  {key:'before_after',label:'Before / After'}
+  {key:'before_after',label:'Before / After'},
+  {key:'videos',label:'Videos'}
 ];
 const SETTING_FIELDS=[
   {key:'phone',label:'Phone'},
@@ -133,6 +134,10 @@ const LISTS={
     {k:'sort',t:'number',l:'Order'},{k:'active',t:'bool',l:'Show'}]},
   before_after:{order:'sort',fields:[
     {k:'before_url',t:'image',l:'Before photo'},{k:'after_url',t:'image',l:'After photo'},
+    {k:'caption',t:'text',l:'Caption'},{k:'sort',t:'number',l:'Order'},{k:'active',t:'bool',l:'Show'}]},
+  videos:{order:'sort',fields:[
+    {k:'video_url',t:'video',l:'Video file (mp4)'},
+    {k:'aspect',t:'select',l:'Aspect ratio',opts:['16:9','9:16','1:1','4:3']},
     {k:'caption',t:'text',l:'Caption'},{k:'sort',t:'number',l:'Order'},{k:'active',t:'bool',l:'Show'}]}
 };
 
@@ -198,6 +203,14 @@ function cardHtml(table,cfg,row){
       h+='<input type="file" accept="image/*" data-upload="'+f.k+'">';
       h+='<img class="thumb '+(row[f.k]?'':'hidden')+'" data-prev="'+f.k+'" src="'+(row[f.k]||'')+'">';
     }
+    else if(f.t==='video'){
+      h+='<input type="hidden" data-f="'+f.k+'" value="'+(row[f.k]||'')+'">';
+      h+='<input type="file" accept="video/*" data-upload="'+f.k+'">';
+      h+='<video class="thumb '+(row[f.k]?'':'hidden')+'" data-prev="'+f.k+'" src="'+(row[f.k]||'')+'" muted playsinline controls style="height:90px;width:auto"></video>';
+    }
+    else if(f.t==='select'){
+      h+='<select data-f="'+f.k+'">'+(f.opts||[]).map(function(o){return '<option '+(String(row[f.k])===o?'selected':'')+'>'+o+'</option>';}).join('')+'</select>';
+    }
     else h+='<input data-f="'+f.k+'" value="'+(row[f.k]?String(row[f.k]).replace(/"/g,'&quot;'):'')+'">';
     h+='</div>';
   });
@@ -212,7 +225,8 @@ function bindCards(table,cfg){
       fi.addEventListener('change',async function(){
         var file=fi.files[0];if(!file)return;
         toast('Uploading…');
-        var path=table+'/'+id+'_'+fi.dataset.upload+'_'+Date.now()+'.jpg';
+        var ext=((file.name||'').split('.').pop()||'bin').toLowerCase();
+        var path=table+'/'+id+'_'+fi.dataset.upload+'_'+Date.now()+'.'+ext;
         var {error}=await sb.storage.from('site-images').upload(path,file,{upsert:true,contentType:file.type});
         if(error){toast('Upload error: '+error.message);return;}
         var {data}=sb.storage.from('site-images').getPublicUrl(path);

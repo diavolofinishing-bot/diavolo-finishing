@@ -979,6 +979,22 @@ footer{
 })();
 </script>
 
+<!-- ═══ VIDEOS ═══ -->
+<style>
+.vid-wrap{padding:5rem 2rem;background:var(--deep);border-bottom:1px solid var(--border);}
+.vid-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px;max-width:1100px;margin:2.5rem auto 0;align-items:start;}
+.vid-item{background:#000;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.vid-item video{width:100%;display:block;background:#000;object-fit:cover;}
+.vid-cap{padding:9px 13px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ash);}
+</style>
+<div class="vid-wrap" id="videos" style="display:none;">
+  <div style="max-width:1100px;margin:0 auto;text-align:center;">
+    <div class="eyebrow">In Motion</div>
+    <h2 class="section-title">Video <span class="fire-text">Showcase</span></h2>
+  </div>
+  <div class="vid-grid" id="videoGrid"></div>
+</div>
+
 <!-- ═══ REVIEWS ═══ -->
 <div class="reviews-wrap" id="reviews">
   <div style="max-width:1100px;margin:0 auto 3rem;text-align:center;">
@@ -1699,6 +1715,18 @@ footer{
   sb.from('colors').select('*').eq('active',true).order('sort',{ascending:true}).then(function(res){
     if(res.error||!res.data||!res.data.length||!window.__setPopular) return;
     window.__setPopular(res.data.map(function(c){return [c.name,c.hex,c.approx?1:0];}));
+  });
+
+  // VIDEOS
+  sb.from('videos').select('*').eq('active',true).order('sort',{ascending:true}).then(function(res){
+    if(res.error||!res.data||!res.data.length) return;
+    var sec=document.getElementById('videos'), grid=document.getElementById('videoGrid');
+    if(!sec||!grid) return;
+    grid.innerHTML=res.data.map(function(v){
+      var ar=String(v.aspect||'16:9').replace(':',' / ');
+      return '<div class="vid-item"><video src="'+attr(v.video_url)+'" controls preload="metadata" playsinline style="aspect-ratio:'+ar+'"></video>'+(v.caption?'<div class="vid-cap">'+esc(v.caption)+'</div>':'')+'</div>';
+    }).join('');
+    sec.style.display='';
   });
 })();
 </script>
