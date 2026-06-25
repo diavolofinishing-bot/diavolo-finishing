@@ -1505,6 +1505,7 @@ footer{
   }
   applyFilter('');
   document.getElementById('cmSearch').addEventListener('input',function(){ applyFilter(this.value); });
+  window.__setPopular=function(arr){ POP=arr; applyFilter(document.getElementById('cmSearch').value||''); };
 })();
 </script>
 <script>
@@ -1622,21 +1623,83 @@ footer{
 <script>
 /* ── Live content from Supabase (admin dashboard) ── */
 (function(){
-  try{
-    var sb=supabase.createClient('https://geqcmsanojmucaiysmaf.supabase.co','sb_publishable_8zWY_Evi24ru1K3UebA1lQ_eYC21ecy');
-    sb.from('settings').select('*').then(function(res){
-      if(res.error||!res.data) return;
-      var m={}; res.data.forEach(function(r){ m[r.key]=r.value; });
-      document.querySelectorAll('[data-setting]').forEach(function(el){
-        var v=m[el.getAttribute('data-setting')];
-        if(v!=null && v!=='') el.textContent=v;
-      });
-      document.querySelectorAll('[data-setting-map]').forEach(function(el){
-        var v=m[el.getAttribute('data-setting-map')];
-        if(v) el.setAttribute('href','https://maps.google.com/?q='+encodeURIComponent(v));
-      });
+  if(typeof supabase==='undefined') return;
+  var sb=supabase.createClient('https://geqcmsanojmucaiysmaf.supabase.co','sb_publishable_8zWY_Evi24ru1K3UebA1lQ_eYC21ecy');
+  function esc(s){var d=document.createElement('div');d.textContent=(s==null?'':s);return d.innerHTML;}
+  function attr(s){return String(s==null?'':s).replace(/"/g,'&quot;');}
+
+  // SETTINGS (contact, hours, etc.)
+  sb.from('settings').select('*').then(function(res){
+    if(res.error||!res.data) return;
+    var m={}; res.data.forEach(function(r){ m[r.key]=r.value; });
+    document.querySelectorAll('[data-setting]').forEach(function(el){
+      var v=m[el.getAttribute('data-setting')]; if(v!=null && v!=='') el.textContent=v;
     });
-  }catch(e){}
+    document.querySelectorAll('[data-setting-map]').forEach(function(el){
+      var v=m[el.getAttribute('data-setting-map')]; if(v) el.setAttribute('href','https://maps.google.com/?q='+encodeURIComponent(v));
+    });
+  });
+
+  // SERVICES (update text in place, keep icons)
+  sb.from('services').select('*').eq('active',true).order('sort',{ascending:true}).then(function(res){
+    if(res.error||!res.data) return;
+    var cards=document.querySelectorAll('.services-grid .svc-card');
+    res.data.forEach(function(s,i){ var c=cards[i]; if(!c)return;
+      var n=c.querySelector('.svc-name'); if(n)n.textContent=s.title;
+      var d=c.querySelector('.svc-desc'); if(d)d.textContent=s.description; });
+    for(var j=res.data.length;j<cards.length;j++) cards[j].style.display='none';
+  });
+
+  // REVIEWS (rebuild)
+  sb.from('reviews').select('*').eq('active',true).order('sort',{ascending:true}).then(function(res){
+    if(res.error||!res.data||!res.data.length) return;
+    var g=document.querySelector('.reviews-grid'); if(!g)return;
+    g.innerHTML=res.data.map(function(r){
+      var n=Math.max(1,Math.min(5,r.rating||5)); var stars=''; for(var i=0;i<n;i++)stars+='★';
+      return '<div class="review-card"><div class="stars">'+stars+'</div><p class="review-text">"'+esc(r.body)+'"</p><div class="review-author">— '+esc(r.author)+'</div></div>';
+    }).join('');
+  });
+
+  // GALLERY (rebuild + lightbox)
+  sb.from('gallery').select('*').eq('active',true).order('sort',{ascending:true}).then(function(res){
+    if(res.error||!res.data||!res.data.length) return;
+    var g=document.querySelector('.gallery-grid'); if(!g)return;
+    g.innerHTML=res.data.map(function(r){
+      return '<div class="gallery-item"><img class="gal-photo" src="'+attr(r.image_url)+'" alt="'+attr(r.caption)+'" loading="lazy"><div class="gal-caption">'+esc(r.caption)+'</div></div>';
+    }).join('');
+    var lb=document.getElementById('lightbox'), lbImg=document.getElementById('lbImg');
+    if(lb&&lbImg){[].forEach.call(g.querySelectorAll('.gallery-item'),function(it){
+      it.style.cursor='pointer';
+      it.addEventListener('click',function(){var im=it.querySelector('.gal-photo');if(im){lbImg.src=im.src;lb.classList.add('open');lb.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';}});
+    });}
+  });
+
+  // BEFORE / AFTER (rebuild + slider init)
+  sb.from('before_after').select('*').eq('active',true).order('sort',{ascending:true}).then(function(res){
+    if(res.error||!res.data||!res.data.length) return;
+    var g=document.querySelector('.ba-grid'); if(!g)return;
+    g.innerHTML=res.data.map(function(r){
+      return '<div><div class="ba-slider"><img class="ba-after" src="'+attr(r.after_url)+'" alt="After"><div class="ba-bwrap"><img class="ba-before" src="'+attr(r.before_url)+'" alt="Before"></div><div class="ba-handle"></div><span class="ba-tag ba-tag-b">Before</span><span class="ba-tag ba-tag-a">After</span></div><div class="ba-cap">'+esc(r.caption)+'</div></div>';
+    }).join('');
+    [].forEach.call(g.querySelectorAll('.ba-slider'),function(s){
+      var bwrap=s.querySelector('.ba-bwrap'),bimg=s.querySelector('.ba-before'),handle=s.querySelector('.ba-handle');
+      function sizeB(){bimg.style.width=s.clientWidth+'px';}
+      function setPct(p){p=Math.max(0,Math.min(100,p));bwrap.style.width=p+'%';handle.style.left=p+'%';}
+      function move(e){var r=s.getBoundingClientRect();var cx=(e.touches?e.touches[0].clientX:e.clientX);setPct((cx-r.left)/r.width*100);}
+      var drag=false;
+      s.addEventListener('pointerdown',function(e){drag=true;move(e);});
+      window.addEventListener('pointermove',function(e){if(drag)move(e);});
+      window.addEventListener('pointerup',function(){drag=false;});
+      sizeB();setPct(50);window.addEventListener('resize',sizeB);
+      if(bimg.complete)sizeB();else bimg.addEventListener('load',sizeB);
+    });
+  });
+
+  // COLORS (popular finishes in color picker)
+  sb.from('colors').select('*').eq('active',true).order('sort',{ascending:true}).then(function(res){
+    if(res.error||!res.data||!res.data.length||!window.__setPopular) return;
+    window.__setPopular(res.data.map(function(c){return [c.name,c.hex,c.approx?1:0];}));
+  });
 })();
 </script>
 </body>
