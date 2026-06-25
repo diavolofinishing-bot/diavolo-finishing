@@ -1724,7 +1724,9 @@ footer{
     if(!sec||!grid) return;
     grid.innerHTML=res.data.map(function(v){
       var ar=String(v.aspect||'16:9').replace(':',' / ');
-      return '<div class="vid-item"><video src="'+attr(v.video_url)+'" controls preload="metadata" playsinline style="aspect-ratio:'+ar+'"></video>'+(v.caption?'<div class="vid-cap">'+esc(v.caption)+'</div>':'')+'</div>';
+      var poster=v.poster_url?(' poster="'+attr(v.poster_url)+'"'):'';
+      var pre=v.poster_url?'none':'metadata';
+      return '<div class="vid-item"><video src="'+attr(v.video_url)+'"'+poster+' controls preload="'+pre+'" playsinline style="aspect-ratio:'+ar+'"></video>'+(v.caption?'<div class="vid-cap">'+esc(v.caption)+'</div>':'')+'</div>';
     }).join('');
     sec.style.display='';
   });
