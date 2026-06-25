@@ -13,7 +13,7 @@ a{color:var(--fire);}
 .wrap{max-width:1000px;margin:0 auto;padding:24px 18px 80px;}
 h1{font-size:22px;letter-spacing:.04em;margin:0;}
 .muted{color:var(--mist);font-size:13px;}
-input,textarea,select{width:100%;background:#0a0606;border:1px solid var(--border);color:var(--ash);border-radius:6px;padding:10px 12px;font-size:14px;font-family:inherit;}
+input,textarea,select{width:100%;background:#0a0606;border:1px solid var(--border);color:var(--ash);border-radius:6px;padding:11px 12px;font-size:16px;font-family:inherit;}
 input[type=checkbox]{width:auto;}
 label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--mist);margin:10px 0 4px;}
 button{cursor:pointer;border:none;border-radius:6px;padding:10px 16px;font-size:14px;font-weight:600;}
@@ -23,13 +23,15 @@ button{cursor:pointer;border:none;border-radius:6px;padding:10px 16px;font-size:
 .btn-del{background:#2a1414;color:#ff7a6b;border:1px solid #4a2020;}
 .hidden{display:none!important;}
 /* login */
-#login{max-width:380px;margin:12vh auto;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:28px;}
+#login{max-width:380px;width:calc(100% - 32px);margin:10vh auto;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:28px;}
+@media(max-width:600px){#login{padding:22px;margin:6vh auto;}.wrap{padding:18px 14px 80px;}}
 #login h1{margin-bottom:4px;}
 #loginErr{color:#ff7a6b;font-size:13px;min-height:18px;margin-top:8px;}
 /* tabs */
 .topbar{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
 .tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;}
-.tab{background:var(--card);border:1px solid var(--border);color:var(--ash);font-size:13px;padding:8px 14px;border-radius:20px;}
+@media(max-width:600px){.tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;}.tab{flex:0 0 auto;}}
+.tab{background:var(--card);border:1px solid var(--border);color:var(--ash);font-size:13px;padding:9px 14px;border-radius:20px;}
 .tab.active{background:var(--fire);color:#fff;border-color:var(--fire);}
 .tab.back{background:transparent;color:var(--mist);border-color:var(--border);}
 .tab.back:hover{color:var(--ash);}
@@ -59,7 +61,7 @@ button{cursor:pointer;border:none;border-radius:6px;padding:10px 16px;font-size:
   <h1>Diavolo <span style="color:var(--fire)">Admin</span></h1>
   <p class="muted">Sign in to manage your site.</p>
   <label>Email</label>
-  <input id="email" type="email" autocomplete="username" value="diavolo.finishing@gmail.com">
+  <input id="email" type="email" inputmode="email" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="username" value="diavolo.finishing@gmail.com">
   <label>Password</label>
   <input id="password" type="password" autocomplete="current-password">
   <div id="loginErr"></div>
@@ -91,10 +93,18 @@ const loginBtn=document.getElementById('loginBtn');
 loginBtn.addEventListener('click',async function(){
   document.getElementById('loginErr').textContent='';
   loginBtn.disabled=true;loginBtn.textContent='Signing in...';
-  var {error}=await sb.auth.signInWithPassword({email:document.getElementById('email').value.trim(),password:document.getElementById('password').value});
-  loginBtn.disabled=false;loginBtn.textContent='Sign In';
-  if(error){document.getElementById('loginErr').textContent=error.message;return;}
-  showDash();
+  try{
+    var em=(document.getElementById('email').value||'').trim().toLowerCase();
+    var pw=document.getElementById('password').value||'';
+    if(!em||!pw){document.getElementById('loginErr').textContent='Enter your email and password.';return;}
+    var {error}=await sb.auth.signInWithPassword({email:em,password:pw});
+    if(error){document.getElementById('loginErr').textContent=error.message;return;}
+    showDash();
+  }catch(e){
+    document.getElementById('loginErr').textContent='Could not sign in: '+(e&&e.message?e.message:'network error');
+  }finally{
+    loginBtn.disabled=false;loginBtn.textContent='Sign In';
+  }
 });
 document.getElementById('password').addEventListener('keydown',function(e){if(e.key==='Enter')loginBtn.click();});
 document.getElementById('logoutBtn').addEventListener('click',async function(){await sb.auth.signOut();location.reload();});
