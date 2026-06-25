@@ -97,11 +97,12 @@ async function showDash(){
   document.getElementById('dash').classList.remove('hidden');
   document.getElementById('who').textContent=data.user.email;
   renderTabs();
-  selectTab('settings');
+  selectTab('orders');
 }
 
 // ---- Config ----
 const TABS=[
+  {key:'orders',label:'📋 Orders'},
   {key:'settings',label:'Contact & Hours'},
   {key:'services',label:'Services'},
   {key:'reviews',label:'Reviews'},
@@ -152,7 +153,7 @@ function renderTabs(){
 }
 function selectTab(key){
   [].forEach.call(document.querySelectorAll('.tab'),function(b){b.classList.toggle('active',b.dataset.key===key);});
-  if(key==='settings')renderSettings();else renderList(key);
+  if(key==='settings')renderSettings();else if(key==='orders')renderOrders();else renderList(key);
 }
 
 // ---- Settings editor ----
@@ -255,6 +256,52 @@ function bindCards(table,cfg){
       var {error}=await sb.from(table).delete().eq('id',id);
       if(error){toast('Error: '+error.message);return;}
       card.remove();toast('Deleted');
+    };
+  });
+}
+
+// ---- Orders dashboard ----
+var ORDER_STATUSES=['New','Contacted','Quoted','In Progress','Done'];
+function eT(s){var d=document.createElement('div');d.textContent=(s==null?'':s);return d.innerHTML;}
+function eA(s){return String(s==null?'':s).replace(/"/g,'&quot;');}
+async function renderOrders(){
+  var p=document.getElementById('panel'); p.innerHTML='<div class="muted">Loading…</div>';
+  var r=await sb.from('orders').select('*').order('created_at',{ascending:false});
+  if(r.error){p.innerHTML='<div class="muted">Error: '+r.error.message+'</div>';return;}
+  if(!r.data||!r.data.length){p.innerHTML='<div class="muted">No orders yet. New quote requests from your website will show up here automatically.</div>';return;}
+  p.innerHTML='<div class="muted" style="margin-bottom:12px">'+r.data.length+' order(s) — newest first</div>'+r.data.map(orderCard).join('');
+  bindOrders();
+}
+function orderCard(o){
+  var dt=new Date(o.created_at); var when=dt.toLocaleDateString()+' '+dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  var opts=ORDER_STATUSES.map(function(s){return '<option '+(o.status===s?'selected':'')+'>'+s+'</option>';}).join('');
+  var photo=o.photo_url?'<a href="'+eA(o.photo_url)+'" target="_blank"><img src="'+eA(o.photo_url)+'" class="thumb" style="height:130px"></a>':'<span class="muted">No photo</span>';
+  return '<div class="card" data-id="'+o.id+'">'
+    +'<div class="card-head"><b style="color:var(--fire);font-size:16px">'+eT(o.order_number||('#'+o.id))+'</b><span class="muted">'+when+'</span></div>'
+    +'<label>Status</label><select data-of="status">'+opts+'</select>'
+    +'<div class="row2" style="margin-top:10px">'
+      +'<div><label>Name</label><div>'+eT(o.name||'—')+'</div></div>'
+      +'<div><label>Phone</label><div><a href="tel:'+eA(o.phone)+'">'+eT(o.phone||'—')+'</a></div></div>'
+      +'<div><label>Email</label><div>'+eT(o.email||'—')+'</div></div>'
+      +'<div><label>Wheel size</label><div>'+eT(o.wheel_size||'—')+'</div></div>'
+      +'<div><label>Finish</label><div>'+eT(o.finish||'—')+'</div></div>'
+      +'<div><label>Color</label><div>'+eT(o.color||'—')+'</div></div>'
+    +'</div>'
+    +'<label>Message</label><div class="muted">'+eT(o.message||'—')+'</div>'
+    +'<label>Photo</label><div>'+photo+'</div>'
+    +'<label>Internal notes</label><textarea data-of="notes" rows="2">'+eT(o.notes||'')+'</textarea>'
+    +'<button class="btn" data-save-order style="margin-top:10px">Save</button>'
+  +'</div>';
+}
+function bindOrders(){
+  [].forEach.call(document.querySelectorAll('#panel .card'),function(card){
+    var id=card.dataset.id; var b=card.querySelector('[data-save-order]');
+    if(b)b.onclick=async function(){
+      b.classList.add('saving');
+      var patch={status:card.querySelector('[data-of="status"]').value, notes:card.querySelector('[data-of="notes"]').value};
+      var r=await sb.from('orders').update(patch).eq('id',id);
+      b.classList.remove('saving');
+      toast(r.error?('Error: '+r.error.message):'Saved ✓');
     };
   });
 }
