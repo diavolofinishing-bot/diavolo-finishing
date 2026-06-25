@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Diavolo Finishing — Admin</title>
+<style>
+:root{--fire:#c41100;--bg:#0c0808;--card:#161010;--border:#3a2020;--ash:#e8e0d8;--mist:#9a8a82;}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--ash);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}
+a{color:var(--fire);}
+.wrap{max-width:1000px;margin:0 auto;padding:24px 18px 80px;}
+h1{font-size:22px;letter-spacing:.04em;margin:0;}
+.muted{color:var(--mist);font-size:13px;}
+input,textarea,select{width:100%;background:#0a0606;border:1px solid var(--border);color:var(--ash);border-radius:6px;padding:10px 12px;font-size:14px;font-family:inherit;}
+input[type=checkbox]{width:auto;}
+label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--mist);margin:10px 0 4px;}
+button{cursor:pointer;border:none;border-radius:6px;padding:10px 16px;font-size:14px;font-weight:600;}
+.btn{background:var(--fire);color:#fff;}
+.btn:hover{background:#e2390f;}
+.btn-ghost{background:transparent;color:var(--mist);border:1px solid var(--border);}
+.btn-del{background:#2a1414;color:#ff7a6b;border:1px solid #4a2020;}
+.hidden{display:none!important;}
+/* login */
+#login{max-width:380px;margin:12vh auto;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:28px;}
+#login h1{margin-bottom:4px;}
+#loginErr{color:#ff7a6b;font-size:13px;min-height:18px;margin-top:8px;}
+/* tabs */
+.topbar{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:14px;margin-bottom:18px;flex-wrap:wrap;gap:10px;}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px;}
+.tab{background:var(--card);border:1px solid var(--border);color:var(--ash);font-size:13px;padding:8px 14px;border-radius:20px;}
+.tab.active{background:var(--fire);color:#fff;border-color:var(--fire);}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+@media(max-width:600px){.row2,.row3{grid-template-columns:1fr;}}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.thumb{height:60px;border-radius:5px;border:1px solid var(--border);margin-top:6px;background:#000;}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#16320f;border:1px solid #2e6b1c;color:#bfe; padding:12px 20px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .25s;z-index:50;}
+.toast.show{opacity:1;}
+.section-actions{margin:0 0 16px;}
+.saving{opacity:.5;pointer-events:none;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <h1>Diavolo <span style="color:var(--fire)">Admin</span></h1>
+  <p class="muted">Sign in to manage your site.</p>
+  <label>Email</label>
+  <input id="email" type="email" autocomplete="username" value="diavolo.finishing@gmail.com">
+  <label>Password</label>
+  <input id="password" type="password" autocomplete="current-password">
+  <div id="loginErr"></div>
+  <button class="btn" style="width:100%;margin-top:14px" id="loginBtn">Sign In</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dash" class="wrap hidden">
+  <div class="topbar">
+    <div><h1>Diavolo <span style="color:var(--fire)">Admin</span></h1><div class="muted" id="who"></div></div>
+    <button class="btn-ghost" id="logoutBtn">Log out</button>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div id="panel"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SB_URL='https://geqcmsanojmucaiysmaf.supabase.co';
+const SB_KEY='sb_publishable_8zWY_Evi24ru1K3UebA1lQ_eYC21ecy';
+const sb=supabase.createClient(SB_URL,SB_KEY);
+
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2200);}
+
+// ---- Auth ----
+const loginBtn=document.getElementById('loginBtn');
+loginBtn.addEventListener('click',async function(){
+  document.getElementById('loginErr').textContent='';
+  loginBtn.disabled=true;loginBtn.textContent='Signing in...';
+  var {error}=await sb.auth.signInWithPassword({email:document.getElementById('email').value.trim(),password:document.getElementById('password').value});
+  loginBtn.disabled=false;loginBtn.textContent='Sign In';
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}
+  showDash();
+});
+document.getElementById('password').addEventListener('keydown',function(e){if(e.key==='Enter')loginBtn.click();});
+document.getElementById('logoutBtn').addEventListener('click',async function(){await sb.auth.signOut();location.reload();});
+
+async function showDash(){
+  var {data}=await sb.auth.getUser();
+  if(!data||!data.user){return;}
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('dash').classList.remove('hidden');
+  document.getElementById('who').textContent=data.user.email;
+  renderTabs();
+  selectTab('settings');
+}
+
+// ---- Config ----
+const TABS=[
+  {key:'settings',label:'Contact & Hours'},
+  {key:'services',label:'Services'},
+  {key:'reviews',label:'Reviews'},
+  {key:'colors',label:'Colors'},
+  {key:'gallery',label:'Gallery'},
+  {key:'before_after',label:'Before / After'}
+];
+const SETTING_FIELDS=[
+  {key:'phone',label:'Phone'},
+  {key:'address',label:'Shop Address'},
+  {key:'hours',label:'Hours'},
+  {key:'instagram',label:'Instagram handle'},
+  {key:'email',label:'Contact Email'},
+  {key:'payment_note',label:'Payment note'}
+];
+const LISTS={
+  services:{order:'sort',fields:[
+    {k:'title',t:'text',l:'Title'},{k:'description',t:'textarea',l:'Description'},
+    {k:'sort',t:'number',l:'Order'},{k:'active',t:'bool',l:'Show'}]},
+  reviews:{order:'sort',fields:[
+    {k:'author',t:'text',l:'Customer name'},{k:'body',t:'textarea',l:'Review'},
+    {k:'rating',t:'number',l:'Stars (1-5)'},{k:'sort',t:'number',l:'Order'},{k:'active',t:'bool',l:'Show'}]},
+  colors:{order:'sort',fields:[
+    {k:'name',t:'text',l:'Color name'},{k:'hex',t:'text',l:'Hex (#000000)'},
+    {k:'kind',t:'text',l:'Type'},{k:'approx',t:'bool',l:'Approx'},
+    {k:'sort',t:'number',l:'Order'},{k:'active',t:'bool',l:'Show'}]},
+  gallery:{order:'sort',fields:[
+    {k:'image_url',t:'image',l:'Photo'},{k:'caption',t:'text',l:'Caption'},
+    {k:'sort',t:'number',l:'Order'},{k:'active',t:'bool',l:'Show'}]},
+  before_after:{order:'sort',fields:[
+    {k:'before_url',t:'image',l:'Before photo'},{k:'after_url',t:'image',l:'After photo'},
+    {k:'caption',t:'text',l:'Caption'},{k:'sort',t:'number',l:'Order'},{k:'active',t:'bool',l:'Show'}]}
+};
+
+function renderTabs(){
+  var c=document.getElementById('tabs');c.innerHTML='';
+  TABS.forEach(function(t){
+    var b=document.createElement('button');b.className='tab';b.textContent=t.label;b.dataset.key=t.key;
+    b.onclick=function(){selectTab(t.key);};
+    c.appendChild(b);
+  });
+}
+function selectTab(key){
+  [].forEach.call(document.querySelectorAll('.tab'),function(b){b.classList.toggle('active',b.dataset.key===key);});
+  if(key==='settings')renderSettings();else renderList(key);
+}
+
+// ---- Settings editor ----
+async function renderSettings(){
+  var p=document.getElementById('panel');p.innerHTML='<div class="muted">Loading…</div>';
+  var {data}=await sb.from('settings').select('*');
+  var map={};(data||[]).forEach(function(r){map[r.key]=r.value;});
+  var html='<div class="card"><div class="card-head"><b>Contact & Hours</b></div>';
+  SETTING_FIELDS.forEach(function(f){
+    html+='<label>'+f.label+'</label><input data-skey="'+f.key+'" value="'+(map[f.key]?String(map[f.key]).replace(/"/g,'&quot;'):'')+'">';
+  });
+  html+='<button class="btn" style="margin-top:16px" id="saveSettings">Save</button></div>';
+  p.innerHTML=html;
+  document.getElementById('saveSettings').onclick=async function(){
+    this.classList.add('saving');
+    var rows=[].map.call(document.querySelectorAll('[data-skey]'),function(i){return {key:i.dataset.skey,value:i.value};});
+    var {error}=await sb.from('settings').upsert(rows,{onConflict:'key'});
+    this.classList.remove('saving');
+    toast(error?('Error: '+error.message):'Saved ✓');
+  };
+}
+
+// ---- Generic list editor ----
+async function renderList(table){
+  var cfg=LISTS[table];var p=document.getElementById('panel');p.innerHTML='<div class="muted">Loading…</div>';
+  var {data,error}=await sb.from(table).select('*').order(cfg.order,{ascending:true});
+  if(error){p.innerHTML='<div class="muted">Error: '+error.message+'</div>';return;}
+  var html='<div class="section-actions"><button class="btn" id="addNew">+ Add new</button></div>';
+  (data||[]).forEach(function(row){html+=cardHtml(table,cfg,row);});
+  p.innerHTML=html;
+  document.getElementById('addNew').onclick=async function(){
+    var blank={};cfg.fields.forEach(function(f){blank[f.k]=f.t==='bool'?true:(f.t==='number'?0:'');});
+    var {error}=await sb.from(table).insert(blank);
+    if(error){toast('Error: '+error.message);return;}
+    renderList(table);
+  };
+  bindCards(table,cfg);
+}
+function cardHtml(table,cfg,row){
+  var h='<div class="card" data-id="'+row.id+'"><div class="row2">';
+  cfg.fields.forEach(function(f){
+    h+='<div>';
+    h+='<label>'+f.l+'</label>';
+    if(f.t==='textarea')h+='<textarea data-f="'+f.k+'" rows="3">'+(row[f.k]||'')+'</textarea>';
+    else if(f.t==='bool')h+='<input type="checkbox" data-f="'+f.k+'" '+(row[f.k]?'checked':'')+'>';
+    else if(f.t==='number')h+='<input type="number" data-f="'+f.k+'" value="'+(row[f.k]==null?0:row[f.k])+'">';
+    else if(f.t==='image'){
+      h+='<input type="hidden" data-f="'+f.k+'" value="'+(row[f.k]||'')+'">';
+      h+='<input type="file" accept="image/*" data-upload="'+f.k+'">';
+      h+='<img class="thumb '+(row[f.k]?'':'hidden')+'" data-prev="'+f.k+'" src="'+(row[f.k]||'')+'">';
+    }
+    else h+='<input data-f="'+f.k+'" value="'+(row[f.k]?String(row[f.k]).replace(/"/g,'&quot;'):'')+'">';
+    h+='</div>';
+  });
+  h+='</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn" data-save>Save</button><button class="btn-del" data-delete>Delete</button></div></div>';
+  return h;
+}
+function bindCards(table,cfg){
+  [].forEach.call(document.querySelectorAll('#panel .card'),function(card){
+    var id=card.dataset.id;
+    // image uploads
+    [].forEach.call(card.querySelectorAll('[data-upload]'),function(fi){
+      fi.addEventListener('change',async function(){
+        var file=fi.files[0];if(!file)return;
+        toast('Uploading…');
+        var path=table+'/'+id+'_'+fi.dataset.upload+'_'+Date.now()+'.jpg';
+        var {error}=await sb.storage.from('site-images').upload(path,file,{upsert:true,contentType:file.type});
+        if(error){toast('Upload error: '+error.message);return;}
+        var {data}=sb.storage.from('site-images').getPublicUrl(path);
+        var url=data.publicUrl;
+        card.querySelector('[data-f="'+fi.dataset.upload+'"]').value=url;
+        var prev=card.querySelector('[data-prev="'+fi.dataset.upload+'"]');prev.src=url;prev.classList.remove('hidden');
+        toast('Photo uploaded ✓ — click Save');
+      });
+    });
+    card.querySelector('[data-save]').onclick=async function(){
+      this.classList.add('saving');
+      var patch={};
+      [].forEach.call(card.querySelectorAll('[data-f]'),function(i){
+        var f=cfg.fields.find(function(x){return x.k===i.dataset.f;});
+        if(f.t==='bool')patch[f.k]=i.checked;
+        else if(f.t==='number')patch[f.k]=i.value===''?null:Number(i.value);
+        else patch[f.k]=i.value;
+      });
+      var {error}=await sb.from(table).update(patch).eq('id',id);
+      this.classList.remove('saving');
+      toast(error?('Error: '+error.message):'Saved ✓');
+    };
+    card.querySelector('[data-delete]').onclick=async function(){
+      if(!confirm('Delete this item?'))return;
+      var {error}=await sb.from(table).delete().eq('id',id);
+      if(error){toast('Error: '+error.message);return;}
+      card.remove();toast('Deleted');
+    };
+  });
+}
+
+// auto-login if session exists
+sb.auth.getSession().then(function(r){if(r.data&&r.data.session)showDash();});
+</script>
+</body>
+</html>
