@@ -475,7 +475,17 @@ function payBlock(o){
   var price=o.price!=null?o.price:'';
   var amt=o.amount_due!=null?o.amount_due:'';
   var ct=o.charge_type||'Full amount';
-  var sel=['Full amount','Deposit 50%','Deposit 25%','Custom'].map(function(s){return '<option '+(ct===s?'selected':'')+'>'+s+'</option>';}).join('');
+  var sel=['Full amount','Deposit 50%','Deposit 25%','Balance remaining','Custom'].map(function(s){return '<option '+(ct===s?'selected':'')+'>'+s+'</option>';}).join('');
+  var total=Number(o.price)||0, paid=Number(o.paid_total)||0, balance=total>0?Math.max(0,total-paid):0;
+  var summary='';
+  if(total>0 && paid>0){
+    var fully=balance<=0.005;
+    summary='<div style="margin-top:10px;padding:9px 11px;border:1px solid var(--border);border-radius:6px;font-size:13px;line-height:1.7">'
+      +'Job total: <b>$'+total.toFixed(2)+'</b> &nbsp;·&nbsp; Paid so far: <b style="color:#3ecf8e">$'+paid.toFixed(2)+'</b><br>'
+      +'Balance: <b style="color:'+(fully?'#3ecf8e':'#e0a000')+'">$'+balance.toFixed(2)+(fully?' — paid in full ✓':' — unpaid')+'</b>'
+      +(fully?'':(' <button class="btn" data-bill-balance data-bal="'+balance.toFixed(2)+'" style="margin-left:8px;padding:6px 12px">Invoice the balance</button>'))
+      +'</div>';
+  }
   var invHtml='';
   if(o.invoice_url){
     var st=o.invoice_status||'open';
@@ -495,6 +505,7 @@ function payBlock(o){
       +'<div><label>Charge</label><select data-of="charge_type">'+sel+'</select></div>'
       +'<div><label>Amount to invoice ($)</label><input type="number" step="0.01" min="0" data-of="amount_due" value="'+eA(amt)+'" placeholder="auto"></div>'
     +'</div>'
+    +summary
     +'<button class="btn" data-send-invoice style="margin-top:10px">'+(o.invoice_url?'Create new invoice':'Create &amp; email Stripe invoice')+'</button>'
     +invHtml;
 }
@@ -502,7 +513,10 @@ function recalcAmount(card){
   var ct=card.querySelector('[data-of="charge_type"]').value;
   if(ct==='Custom')return;
   var price=parseFloat(card.querySelector('[data-of="price"]').value)||0;
-  var a=ct==='Deposit 50%'?price*0.5:(ct==='Deposit 25%'?price*0.25:price);
+  var o=ORDERS[card.dataset.id]||{}; var paid=Number(o.paid_total)||0;
+  var a;
+  if(ct==='Deposit 50%')a=price*0.5; else if(ct==='Deposit 25%')a=price*0.25;
+  else if(ct==='Balance remaining')a=Math.max(0,price-paid); else a=price;
   card.querySelector('[data-of="amount_due"]').value=a?a.toFixed(2):'';
 }
 function bindOrders(){
@@ -521,6 +535,12 @@ function bindOrders(){
       var r=await sb.from('orders').update(patch).eq('id',id);
       b.classList.remove('saving');
       toast(r.error?('Error: '+r.error.message):'Saved ✓');
+    };
+    var bb=card.querySelector('[data-bill-balance]');
+    if(bb)bb.onclick=function(){
+      card.querySelector('[data-of="charge_type"]').value='Balance remaining';
+      card.querySelector('[data-of="amount_due"]').value=bb.dataset.bal;
+      var sx=card.querySelector('[data-send-invoice]'); if(sx)sx.click();
     };
     var sendBtn=card.querySelector('[data-send-invoice]');
     if(sendBtn)sendBtn.onclick=async function(){
