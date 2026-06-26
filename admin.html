@@ -359,6 +359,7 @@ function orderToolbar(){
   }).join('');
   return '<div class="ord-toolbar">'
       +'<input class="ord-search" id="ordSearch" placeholder="Search name, phone, order #, color…" value="'+eA(ORD_SEARCH)+'">'
+      +'<button class="btn-ghost" id="refreshBtn" style="white-space:nowrap" title="Check for new orders">↻ Refresh</button>'
       +'<button class="btn" id="newInvBtn" style="white-space:nowrap">+ New invoice</button>'
     +'</div>'
     +'<div id="newInvForm" class="card hidden">'
@@ -386,6 +387,8 @@ function bindToolbar(){
   [].forEach.call(document.querySelectorAll('.chip[data-filter]'),function(c){
     c.onclick=function(){ORD_FILTER=c.dataset.filter;[].forEach.call(document.querySelectorAll('.chip[data-filter]'),function(x){x.classList.toggle('active',x===c);});renderOrderList();};
   });
+  var rb=document.getElementById('refreshBtn');
+  if(rb)rb.onclick=function(){rb.textContent='↻ …';renderOrders();};
   var nb=document.getElementById('newInvBtn'), nf=document.getElementById('newInvForm');
   if(nb)nb.onclick=function(){nf.classList.toggle('hidden');if(!nf.classList.contains('hidden'))document.getElementById('niName').focus();};
   var nc=document.getElementById('niCancel');
