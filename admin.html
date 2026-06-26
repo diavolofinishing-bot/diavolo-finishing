@@ -341,12 +341,12 @@ function invBadge(st){
   if(st==='void')return '<div class="badge" style="background:#241616;color:#9a8a82;margin-top:4px">Void</div>';
   return '<div class="badge" style="background:#3a2c10;color:#e0a000;margin-top:4px">Unpaid</div>';
 }
+function genOrderNo(){var d=new Date();function p(n){return ('0'+n).slice(-2);}return 'DF-'+String(d.getFullYear()).slice(2)+p(d.getMonth()+1)+p(d.getDate())+'-'+Math.floor(1000+Math.random()*9000);}
 async function renderOrders(){
   var p=document.getElementById('panel'); p.innerHTML='<div class="muted">Loading…</div>';
   var r=await sb.from('orders').select('*').order('created_at',{ascending:false});
   if(r.error){p.innerHTML='<div class="muted">Error: '+r.error.message+'</div>';return;}
   ORDER_LIST=r.data||[]; ORDERS={}; ORDER_LIST.forEach(function(o){ORDERS[o.id]=o;});
-  if(!ORDER_LIST.length){p.innerHTML='<div class="muted">No orders yet. New quote requests from your website will show up here automatically.</div>';return;}
   p.innerHTML=orderToolbar()+'<div id="ordList"></div>';
   bindToolbar();
   renderOrderList();
@@ -357,7 +357,26 @@ function orderToolbar(){
   var chips=['All'].concat(ORDER_STATUSES).map(function(s){
     return '<button class="chip'+(ORD_FILTER===s?' active':'')+'" data-filter="'+eA(s)+'">'+eT(s)+'<span class="n">'+(counts[s]||0)+'</span></button>';
   }).join('');
-  return '<div class="ord-toolbar"><input class="ord-search" id="ordSearch" placeholder="Search name, phone, order #, color…" value="'+eA(ORD_SEARCH)+'"></div>'
+  return '<div class="ord-toolbar">'
+      +'<input class="ord-search" id="ordSearch" placeholder="Search name, phone, order #, color…" value="'+eA(ORD_SEARCH)+'">'
+      +'<button class="btn" id="newInvBtn" style="white-space:nowrap">+ New invoice</button>'
+    +'</div>'
+    +'<div id="newInvForm" class="card hidden">'
+      +'<b style="font-size:15px">Create an invoice</b>'
+      +'<div class="muted" style="margin:2px 0 10px">For a walk-in or phone customer. This creates an order and a Stripe invoice.</div>'
+      +'<div class="row2">'
+        +'<div><label>Customer name *</label><input id="niName"></div>'
+        +'<div><label>Email *</label><input id="niEmail" type="email" inputmode="email" autocapitalize="none" autocorrect="off"></div>'
+        +'<div><label>Phone</label><input id="niPhone" type="tel"></div>'
+        +'<div><label>Amount ($) *</label><input id="niAmount" type="number" step="0.01" min="0" placeholder="e.g. 400"></div>'
+      +'</div>'
+      +'<label>What it\'s for</label><input id="niDesc" placeholder="e.g. Powder coating 4 wheels — gloss black">'
+      +'<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'
+        +'<button class="btn" id="niCreate">Create &amp; send invoice</button>'
+        +'<button class="tab" id="niCancel">Cancel</button>'
+      +'</div>'
+      +'<div class="muted" id="niMsg" style="margin-top:8px;min-height:16px"></div>'
+    +'</div>'
     +'<div class="chips">'+chips+'</div>';
 }
 function bindToolbar(){
@@ -366,6 +385,29 @@ function bindToolbar(){
   [].forEach.call(document.querySelectorAll('.chip[data-filter]'),function(c){
     c.onclick=function(){ORD_FILTER=c.dataset.filter;[].forEach.call(document.querySelectorAll('.chip[data-filter]'),function(x){x.classList.toggle('active',x===c);});renderOrderList();};
   });
+  var nb=document.getElementById('newInvBtn'), nf=document.getElementById('newInvForm');
+  if(nb)nb.onclick=function(){nf.classList.toggle('hidden');if(!nf.classList.contains('hidden'))document.getElementById('niName').focus();};
+  var nc=document.getElementById('niCancel');
+  if(nc)nc.onclick=function(){nf.classList.add('hidden');};
+  var nCreate=document.getElementById('niCreate');
+  if(nCreate)nCreate.onclick=async function(){
+    function v(id){return (document.getElementById(id).value||'').trim();}
+    var name=v('niName'), email=v('niEmail').toLowerCase(), phone=v('niPhone'), desc=v('niDesc'), amount=parseFloat(v('niAmount'))||0;
+    var msg=document.getElementById('niMsg');
+    if(!name||!email||amount<0.5){msg.style.color='#ff7a6b';msg.textContent='Enter customer name, email, and an amount of at least $0.50.';return;}
+    nCreate.disabled=true;var old=nCreate.textContent;nCreate.textContent='Creating…';msg.style.color='';msg.textContent='';
+    var on=genOrderNo();
+    var ins=await sb.from('orders').insert({order_number:on,name:name,email:email,phone:phone,message:desc,status:'Quoted',price:amount,amount_due:amount,charge_type:'Full amount'}).select();
+    if(ins.error){nCreate.disabled=false;nCreate.textContent=old;msg.style.color='#ff7a6b';msg.textContent='Error: '+ins.error.message;return;}
+    var id=ins.data[0].id;
+    var res=await callInvoiceFn({action:'create',order_id:id,amount_cents:Math.round(amount*100),email:email,name:name,description:desc||('Diavolo Finishing — '+on),charge_type:'Full amount',price:amount});
+    nCreate.disabled=false;nCreate.textContent=old;
+    if(res&&res.error){toast('Invoice error: '+res.error);}
+    else{toast(res.emailed?('Invoice emailed to '+email+' ✓'):'Invoice created ✓ — open the order to copy the link');}
+    ['niName','niEmail','niPhone','niDesc','niAmount'].forEach(function(i){document.getElementById(i).value='';});
+    nf.classList.add('hidden');
+    renderOrders();
+  };
 }
 function renderOrderList(){
   var c=document.getElementById('ordList'); if(!c)return;
@@ -375,7 +417,9 @@ function renderOrderList(){
     if(term){var hay=((o.order_number||'')+' '+(o.name||'')+' '+(o.phone||'')+' '+(o.email||'')+' '+(o.color||'')).toLowerCase();if(hay.indexOf(term)<0)return false;}
     return true;
   });
-  c.innerHTML=rows.length?rows.map(orderRow).join(''):'<div class="muted">No matching orders.</div>';
+  if(rows.length){c.innerHTML=rows.map(orderRow).join('');}
+  else if(!ORDER_LIST.length){c.innerHTML='<div class="muted">No orders yet. Website quote requests appear here automatically — or use “+ New invoice” to bill a customer directly.</div>';}
+  else{c.innerHTML='<div class="muted">No matching orders.</div>';}
   bindOrders();
 }
 function orderRow(o){
