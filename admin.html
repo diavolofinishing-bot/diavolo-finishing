@@ -43,6 +43,25 @@ button{cursor:pointer;border:none;border-radius:6px;padding:10px 16px;font-size:
 .hc-t{font-size:22px;font-weight:700;color:var(--ash);margin-bottom:6px;}
 .hc-s{font-size:13px;color:var(--mist);max-width:240px;margin:0 auto;line-height:1.4;}
 .card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:12px;}
+/* orders list */
+.ord-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+.ord-search{flex:1;min-width:200px;}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;overflow-x:auto;}
+.chip{background:var(--card);border:1px solid var(--border);color:var(--ash);font-size:12px;padding:7px 12px;border-radius:16px;cursor:pointer;white-space:nowrap;}
+.chip.active{background:var(--fire);border-color:var(--fire);color:#fff;}
+.chip .n{opacity:.65;margin-left:5px;font-weight:400;}
+.ord{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--card);overflow:hidden;}
+.ord-row{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;}
+.ord-row:hover{background:#1c1414;}
+.ord-main{flex:1;min-width:0;}
+.ord-num{font-weight:700;color:var(--ash);font-size:14px;}
+.ord-sub{color:var(--mist);font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ord-right{text-align:right;white-space:nowrap;}
+.ord-amt{font-weight:700;color:var(--ash);font-size:14px;}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:12px;line-height:1.4;}
+.chev{color:var(--mist);transition:transform .15s;font-size:12px;}
+.ord.open .chev{transform:rotate(180deg);}
+.ord-detail{border-top:1px solid var(--border);padding:14px;}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
 @media(max-width:600px){.row2,.row3{grid-template-columns:1fr;}}
@@ -311,22 +330,72 @@ async function callInvoiceFn(payload){
     return await r.json();
   }catch(e){return {error:String(e.message||e)};}
 }
+var ORDER_LIST=[];
+var ORD_FILTER='All';
+var ORD_SEARCH='';
+function statusColors(s){return ({'New':['#3a1410','#ff7a6b'],'Contacted':['#3a2c10','#e0a000'],'Quoted':['#102a3a','#5bb0e0'],'In Progress':['#2a1038','#b07ae0'],'Done':['#103a1c','#3ecf8e']})[s]||['#222','#999'];}
+function statusBadge(s){var c=statusColors(s);return '<span class="badge" style="background:'+c[0]+';color:'+c[1]+'">'+eT(s||'New')+'</span>';}
+function invBadge(st){
+  if(!st)return '';
+  if(st==='paid')return '<div class="badge" style="background:#103a1c;color:#3ecf8e;margin-top:4px">Paid</div>';
+  if(st==='void')return '<div class="badge" style="background:#241616;color:#9a8a82;margin-top:4px">Void</div>';
+  return '<div class="badge" style="background:#3a2c10;color:#e0a000;margin-top:4px">Unpaid</div>';
+}
 async function renderOrders(){
   var p=document.getElementById('panel'); p.innerHTML='<div class="muted">Loading…</div>';
   var r=await sb.from('orders').select('*').order('created_at',{ascending:false});
   if(r.error){p.innerHTML='<div class="muted">Error: '+r.error.message+'</div>';return;}
-  if(!r.data||!r.data.length){p.innerHTML='<div class="muted">No orders yet. New quote requests from your website will show up here automatically.</div>';return;}
-  ORDERS={}; r.data.forEach(function(o){ORDERS[o.id]=o;});
-  p.innerHTML='<div class="muted" style="margin-bottom:12px">'+r.data.length+' order(s) — newest first</div>'+r.data.map(orderCard).join('');
+  ORDER_LIST=r.data||[]; ORDERS={}; ORDER_LIST.forEach(function(o){ORDERS[o.id]=o;});
+  if(!ORDER_LIST.length){p.innerHTML='<div class="muted">No orders yet. New quote requests from your website will show up here automatically.</div>';return;}
+  p.innerHTML=orderToolbar()+'<div id="ordList"></div>';
+  bindToolbar();
+  renderOrderList();
+}
+function orderToolbar(){
+  var counts={All:ORDER_LIST.length}; ORDER_STATUSES.forEach(function(s){counts[s]=0;});
+  ORDER_LIST.forEach(function(o){counts[o.status]=(counts[o.status]||0)+1;});
+  var chips=['All'].concat(ORDER_STATUSES).map(function(s){
+    return '<button class="chip'+(ORD_FILTER===s?' active':'')+'" data-filter="'+eA(s)+'">'+eT(s)+'<span class="n">'+(counts[s]||0)+'</span></button>';
+  }).join('');
+  return '<div class="ord-toolbar"><input class="ord-search" id="ordSearch" placeholder="Search name, phone, order #, color…" value="'+eA(ORD_SEARCH)+'"></div>'
+    +'<div class="chips">'+chips+'</div>';
+}
+function bindToolbar(){
+  var se=document.getElementById('ordSearch');
+  if(se)se.addEventListener('input',function(){ORD_SEARCH=se.value;renderOrderList();});
+  [].forEach.call(document.querySelectorAll('.chip[data-filter]'),function(c){
+    c.onclick=function(){ORD_FILTER=c.dataset.filter;[].forEach.call(document.querySelectorAll('.chip[data-filter]'),function(x){x.classList.toggle('active',x===c);});renderOrderList();};
+  });
+}
+function renderOrderList(){
+  var c=document.getElementById('ordList'); if(!c)return;
+  var term=ORD_SEARCH.trim().toLowerCase();
+  var rows=ORDER_LIST.filter(function(o){
+    if(ORD_FILTER!=='All' && (o.status||'New')!==ORD_FILTER) return false;
+    if(term){var hay=((o.order_number||'')+' '+(o.name||'')+' '+(o.phone||'')+' '+(o.email||'')+' '+(o.color||'')).toLowerCase();if(hay.indexOf(term)<0)return false;}
+    return true;
+  });
+  c.innerHTML=rows.length?rows.map(orderRow).join(''):'<div class="muted">No matching orders.</div>';
   bindOrders();
 }
-function orderCard(o){
-  var dt=new Date(o.created_at); var when=dt.toLocaleDateString()+' '+dt.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+function orderRow(o){
+  var dt=new Date(o.created_at); var when=dt.toLocaleDateString([], {month:'short',day:'numeric'});
+  var meta=[o.name,o.wheel_size,o.finish,o.color].filter(Boolean).join(' · ')||'—';
+  var right=(o.amount_due!=null?('<div class="ord-amt">$'+Number(o.amount_due).toFixed(2)+'</div>'):'')+(o.invoice_url?invBadge(o.invoice_status):'');
+  return '<div class="ord" data-id="'+o.id+'">'
+    +'<div class="ord-row" data-toggle>'
+      +statusBadge(o.status)
+      +'<div class="ord-main"><div class="ord-num">'+eT(o.order_number||('#'+o.id))+'</div><div class="ord-sub">'+eT(meta)+'</div></div>'
+      +'<div class="ord-right"><div class="ord-sub" style="margin:0">'+when+'</div>'+right+'</div>'
+      +'<span class="chev">▾</span>'
+    +'</div>'
+    +'<div class="ord-detail hidden">'+orderDetail(o)+'</div>'
+  +'</div>';
+}
+function orderDetail(o){
   var opts=ORDER_STATUSES.map(function(s){return '<option '+(o.status===s?'selected':'')+'>'+s+'</option>';}).join('');
   var photo=o.photo_url?'<a href="'+eA(o.photo_url)+'" target="_blank"><img src="'+eA(o.photo_url)+'" class="thumb" style="height:130px"></a>':'<span class="muted">No photo</span>';
-  return '<div class="card" data-id="'+o.id+'">'
-    +'<div class="card-head"><b style="color:var(--fire);font-size:16px">'+eT(o.order_number||('#'+o.id))+'</b><span class="muted">'+when+'</span></div>'
-    +'<label>Status</label><select data-of="status">'+opts+'</select>'
+  return '<label>Status</label><select data-of="status">'+opts+'</select>'
     +'<div class="row2" style="margin-top:10px">'
       +'<div><label>Name</label><div>'+eT(o.name||'—')+'</div></div>'
       +'<div><label>Phone</label><div><a href="tel:'+eA(o.phone)+'">'+eT(o.phone||'—')+'</a></div></div>'
@@ -341,8 +410,7 @@ function orderCard(o){
     +'<label>💳 Payment</label>'
     +payBlock(o)
     +'<label style="margin-top:12px;display:block">Internal notes</label><textarea data-of="notes" rows="2">'+eT(o.notes||'')+'</textarea>'
-    +'<button class="btn" data-save-order style="margin-top:10px">Save</button>'
-  +'</div>';
+    +'<button class="btn" data-save-order style="margin-top:10px">Save</button>';
 }
 function payBlock(o){
   var price=o.price!=null?o.price:'';
@@ -379,8 +447,10 @@ function recalcAmount(card){
   card.querySelector('[data-of="amount_due"]').value=a?a.toFixed(2):'';
 }
 function bindOrders(){
-  [].forEach.call(document.querySelectorAll('#panel .card'),function(card){
+  [].forEach.call(document.querySelectorAll('#panel .ord'),function(card){
     var id=card.dataset.id; var b=card.querySelector('[data-save-order]');
+    var tg=card.querySelector('[data-toggle]'), det=card.querySelector('.ord-detail');
+    if(tg)tg.onclick=function(){card.classList.toggle('open');if(det)det.classList.toggle('hidden');};
     var priceEl=card.querySelector('[data-of="price"]'), ctEl=card.querySelector('[data-of="charge_type"]');
     if(priceEl)priceEl.addEventListener('input',function(){recalcAmount(card);});
     if(ctEl)ctEl.addEventListener('change',function(){recalcAmount(card);});
