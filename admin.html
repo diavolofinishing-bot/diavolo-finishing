@@ -388,7 +388,17 @@ function bindToolbar(){
     c.onclick=function(){ORD_FILTER=c.dataset.filter;[].forEach.call(document.querySelectorAll('.chip[data-filter]'),function(x){x.classList.toggle('active',x===c);});renderOrderList();};
   });
   var rb=document.getElementById('refreshBtn');
-  if(rb)rb.onclick=function(){rb.textContent='↻ …';renderOrders();};
+  if(rb)rb.onclick=async function(){
+    rb.disabled=true;rb.textContent='↻ Syncing…';
+    try{
+      var r=await sb.from('orders').select('id,invoice_id,invoice_status').not('invoice_id','is',null);
+      var pend=(r.data||[]).filter(function(o){return o.invoice_id && o.invoice_status!=='paid' && o.invoice_status!=='void';});
+      await Promise.all(pend.map(function(o){return callInvoiceFn({action:'status',order_id:o.id,invoice_id:o.invoice_id});}));
+    }catch(e){}
+    rb.disabled=false;
+    await renderOrders();
+    toast('Refreshed ✓');
+  };
   var nb=document.getElementById('newInvBtn'), nf=document.getElementById('newInvForm');
   if(nb)nb.onclick=function(){nf.classList.toggle('hidden');if(!nf.classList.contains('hidden'))document.getElementById('niName').focus();};
   var nc=document.getElementById('niCancel');
