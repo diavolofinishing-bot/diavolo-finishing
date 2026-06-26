@@ -1324,21 +1324,25 @@ footer{
   }
   function saveOrder(orderNo){
     try{
-      var sb=window.__sb; if(!sb) return;
-      var c1El=document.getElementById('qfColor'),c2El=document.getElementById('qfColor2'),c2W=document.getElementById('qfColor2Wrap');
-      var colorVal=c1El?c1El.value.trim():'';
+      var sb=window.__sb;
+      if(!sb){ console.warn('saveOrder: Supabase not ready'); return; }
+      function val(id){var el=document.getElementById(id);return el?(el.value||'').trim():'';}
+      var colorVal=val('qfColor');
+      var c2W=document.getElementById('qfColor2Wrap'),c2El=document.getElementById('qfColor2');
       if(c2W && c2W.style.display!=='none' && c2El && c2El.value.trim()){colorVal+=(colorVal?' + ':'')+c2El.value.trim();}
-      var mEl=form.querySelector('textarea[name="message"]');
-      var rec={order_number:orderNo,name:name.value.trim(),phone:phone.value.trim(),email:email.value.trim(),wheel_size:size.value,finish:finishInput.value,color:colorVal,message:mEl?mEl.value.trim():''};
-      var f=photoInput&&photoInput.files[0];
+      var mEl=document.querySelector('#quoteForm textarea[name="message"]')||document.querySelector('textarea[name="message"]');
+      var rec={order_number:orderNo,name:val('qfName'),phone:val('qfPhone'),email:val('qfEmail'),wheel_size:val('qfSize'),finish:val('qfFinish'),color:colorVal,message:mEl?(mEl.value||'').trim():''};
+      function doInsert(){ sb.from('orders').insert(rec).then(function(r){ if(r&&r.error) console.warn('saveOrder insert error:',r.error.message); }); }
+      var pin=document.getElementById('qfPhoto');
+      var f=pin&&pin.files&&pin.files[0];
       if(f){
         var path='quotes/'+orderNo+'_'+Date.now()+'.jpg';
         sb.storage.from('site-images').upload(path,f,{contentType:f.type}).then(function(up){
-          if(!up.error){ rec.photo_url=sb.storage.from('site-images').getPublicUrl(path).data.publicUrl; }
-          sb.from('orders').insert(rec);
-        });
-      } else { sb.from('orders').insert(rec); }
-    }catch(e){}
+          if(up && !up.error){ rec.photo_url=sb.storage.from('site-images').getPublicUrl(path).data.publicUrl; }
+          doInsert();
+        }, function(){ doInsert(); });
+      } else { doInsert(); }
+    }catch(e){ console.warn('saveOrder threw:',e&&e.message); }
   }
   function logToSheet(orderNo){
     if(!SHEET_LOG_URL || SHEET_LOG_URL.indexOf('http')!==0) return;
