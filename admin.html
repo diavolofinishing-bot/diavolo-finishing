@@ -66,7 +66,11 @@ button{cursor:pointer;border:none;border-radius:6px;padding:10px 16px;font-size:
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
 @media(max-width:600px){.row2,.row3{grid-template-columns:1fr;}}
 .card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
-.thumb{height:60px;border-radius:5px;border:1px solid var(--border);margin-top:6px;background:#000;}
+.thumb{height:60px;border-radius:5px;border:1px solid var(--border);margin-top:6px;background:#000;cursor:zoom-in;}
+img.thumb:hover{border-color:var(--fire);}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;cursor:zoom-out;}
+.lightbox.hidden{display:none;}
+.lightbox img{max-width:96vw;max-height:94vh;border-radius:8px;box-shadow:0 12px 50px rgba(0,0,0,.7);}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#16320f;border:1px solid #2e6b1c;color:#bfe; padding:12px 20px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .25s;z-index:50;}
 .toast.show{opacity:1;}
 .section-actions{margin:0 0 16px;}
@@ -98,6 +102,7 @@ button{cursor:pointer;border:none;border-radius:6px;padding:10px 16px;font-size:
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="lightbox hidden" id="lightbox"><img id="lbImg" src="" alt=""></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -596,6 +601,16 @@ function bindOrders(){
     if(vd)vd.onclick=async function(){var o=ORDERS[id]||{};if(!confirm('Void this invoice? The customer will no longer be able to pay it.'))return;var res=await callInvoiceFn({action:'void',order_id:id,invoice_id:o.invoice_id});if(res&&res.error){toast('Error: '+res.error);}else{toast('Invoice voided');renderOrders();}};
   });
 }
+
+// ---- Image lightbox (click any thumbnail to enlarge) ----
+document.addEventListener('click',function(e){
+  var t=e.target;
+  if(t&&t.tagName==='IMG'&&t.classList.contains('thumb')&&t.getAttribute('src')&&!t.closest('a')){
+    var lb=document.getElementById('lightbox');document.getElementById('lbImg').src=t.src;lb.classList.remove('hidden');
+  }
+});
+(function(){var lb=document.getElementById('lightbox');if(lb)lb.addEventListener('click',function(){this.classList.add('hidden');document.getElementById('lbImg').src='';});})();
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){var lb=document.getElementById('lightbox');if(lb&&!lb.classList.contains('hidden')){lb.classList.add('hidden');document.getElementById('lbImg').src='';}}});
 
 // auto-login if session exists
 sb.auth.getSession().then(function(r){if(r.data&&r.data.session)showDash();});
