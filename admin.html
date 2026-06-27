@@ -502,21 +502,22 @@ function payBlock(o){
     var st=o.invoice_status||'open';
     var label=st==='paid'?'PAID ✓':(st==='void'?'Voided':'Sent — awaiting payment');
     var color=st==='paid'?'#3ecf8e':(st==='void'?'var(--mist)':'#e0a000');
+    var payUrl=o.invoice_short_url||o.invoice_url;
     var textBtn='';
     if(o.phone){
       var opl=chargeLabel(o.charge_type||'Full amount');
       var amt2=o.amount_due!=null?Number(o.amount_due).toFixed(2):'';
-      var body='Hi '+(o.name||'')+' — Diavolo Finishing here. Your '+opl+' invoice'+(o.order_number?(' for '+o.order_number):'')+' is $'+amt2+'. Pay securely by card: '+o.invoice_url+' . Thank you!';
+      var body='Hi '+(o.name||'')+' — Diavolo Finishing here. Your '+opl+' invoice'+(o.order_number?(' for '+o.order_number):'')+' is $'+amt2+'. Pay securely by card: '+payUrl+' . Thank you!';
       var href='sms:'+digitsPhone(o.phone)+'?&body='+encodeURIComponent(body);
       textBtn='<a class="tab" href="'+eA(href)+'" data-text-log style="background:#10261a;border-color:#2e6b1c;color:#9be8c0">💬 Text customer</a>';
     }
     var textedNote=o.last_texted?('<div class="muted" style="margin-top:6px">Texted ✓ '+eT(new Date(o.last_texted).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}))+'</div>'):'';
     invHtml='<div style="margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:6px">'
       +'<div>Invoice status: <b style="color:'+color+'">'+label+'</b>'+(o.amount_due!=null?(' &nbsp;($'+Number(o.amount_due).toFixed(2)+')'):'')+'</div>'
-      +'<div style="margin-top:6px"><a href="'+eA(o.invoice_url)+'" target="_blank">View / pay invoice ↗</a></div>'
+      +'<div style="margin-top:6px"><a href="'+eA(payUrl)+'" target="_blank">View / pay invoice ↗</a>'+(o.invoice_short_url?(' <span class="muted">('+eT(o.invoice_short_url)+')</span>'):'')+'</div>'
       +'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
         +textBtn
-        +'<button class="tab" data-inv-copy data-url="'+eA(o.invoice_url)+'">Copy link</button>'
+        +'<button class="tab" data-inv-copy data-url="'+eA(payUrl)+'">Copy link</button>'
         +'<button class="tab" data-inv-refresh>Refresh status</button>'
         +((st!=='void'&&st!=='paid')?'<button class="tab" data-inv-void>Void</button>':'')
       +'</div>'+textedNote+'</div>';
