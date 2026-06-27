@@ -507,7 +507,12 @@ function payBlock(o){
     if(o.phone){
       var opl=chargeLabel(o.charge_type||'Full amount');
       var amt2=o.amount_due!=null?Number(o.amount_due).toFixed(2):'';
-      var body='Hi '+(o.name||'')+' — Diavolo Finishing here. Your '+opl+' invoice'+(o.order_number?(' for '+o.order_number):'')+' is $'+amt2+'. Pay securely by card: '+payUrl+' . Thank you!';
+      var jd=jobDetails(o);
+      var lines=[(o.name?('Hi '+o.name+','):'Hello,'),'','This is Diavolo Finishing.',''];
+      if(o.order_number)lines.push('Invoice: '+o.order_number);
+      lines.push('For: '+opl+(jd?(' — '+jd):''));
+      lines.push('Amount due: $'+amt2,'','Pay securely by card:',payUrl,'','Thank you!');
+      var body=lines.join('\n');
       var href='sms:'+digitsPhone(o.phone)+'?&body='+encodeURIComponent(body);
       textBtn='<a class="tab" href="'+eA(href)+'" data-text-log style="background:#10261a;border-color:#2e6b1c;color:#9be8c0">💬 Text customer</a>';
     }
