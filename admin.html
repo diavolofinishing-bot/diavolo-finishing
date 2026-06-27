@@ -334,7 +334,7 @@ var ORDER_LIST=[];
 var ORD_FILTER='All';
 var ORD_SEARCH='';
 function chargeLabel(ct){return ct==='Deposit 50%'?'50% deposit':ct==='Deposit 25%'?'25% deposit':ct==='Balance remaining'?'Remaining balance':'Full payment';}
-function jobDetails(o){var p=[];if(o.quantity)p.push(o.quantity+'×');if(o.wheel_size)p.push(o.wheel_size+(o.wheel_size.indexOf('"')<0?'"':''));if(o.finish)p.push(o.finish);if(o.color)p.push(o.color);return p.join(' · ');}
+function jobDetails(o){var p=[];var qs=o.quantity?(o.quantity+'×'):'';if(o.wheel_size){var ws=o.wheel_size+(o.wheel_size.indexOf('"')<0?'"':'');qs=qs?(qs+' '+ws):ws;}if(qs)p.push(qs);else if(o.quantity)p.push(o.quantity+' pcs');if(o.finish)p.push(o.finish);if(o.color)p.push(o.color);return p.join(' · ');}
 function invoiceDesc(o,ct){var d='Diavolo Finishing — '+(o.order_number||'Order')+' — '+chargeLabel(ct);var jd=jobDetails(o);if(jd)d+='. '+jd;if(o.message)d+='. Note: '+o.message;return d.slice(0,480);}
 function digitsPhone(p){var d=(p||'').replace(/[^0-9]/g,'');if(d.length===10)return '+1'+d;if(d.length===11&&d[0]==='1')return '+'+d;return d?('+'+d):'';}
 function statusColors(s){return ({'New':['#3a1410','#ff7a6b'],'Contacted':['#3a2c10','#e0a000'],'Quoted':['#102a3a','#5bb0e0'],'In Progress':['#2a1038','#b07ae0'],'Done':['#103a1c','#3ecf8e']})[s]||['#222','#999'];}
