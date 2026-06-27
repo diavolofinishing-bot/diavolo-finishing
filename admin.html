@@ -333,6 +333,10 @@ async function callInvoiceFn(payload){
 var ORDER_LIST=[];
 var ORD_FILTER='All';
 var ORD_SEARCH='';
+function chargeLabel(ct){return ct==='Deposit 50%'?'50% deposit':ct==='Deposit 25%'?'25% deposit':ct==='Balance remaining'?'Remaining balance':'Full payment';}
+function jobDetails(o){var p=[];if(o.quantity)p.push(o.quantity+'×');if(o.wheel_size)p.push(o.wheel_size+(o.wheel_size.indexOf('"')<0?'"':''));if(o.finish)p.push(o.finish);if(o.color)p.push(o.color);return p.join(' · ');}
+function invoiceDesc(o,ct){var d='Diavolo Finishing — '+(o.order_number||'Order')+' — '+chargeLabel(ct);var jd=jobDetails(o);if(jd)d+='. '+jd;if(o.message)d+='. Note: '+o.message;return d.slice(0,480);}
+function digitsPhone(p){var d=(p||'').replace(/[^0-9]/g,'');if(d.length===10)return '+1'+d;if(d.length===11&&d[0]==='1')return '+'+d;return d?('+'+d):'';}
 function statusColors(s){return ({'New':['#3a1410','#ff7a6b'],'Contacted':['#3a2c10','#e0a000'],'Quoted':['#102a3a','#5bb0e0'],'In Progress':['#2a1038','#b07ae0'],'Done':['#103a1c','#3ecf8e']})[s]||['#222','#999'];}
 function statusBadge(s){var c=statusColors(s);return '<span class="badge" style="background:'+c[0]+';color:'+c[1]+'">'+eT(s||'New')+'</span>';}
 function invBadge(st){
@@ -370,9 +374,10 @@ function orderToolbar(){
         +'<div><label>Email *</label><input id="niEmail" type="email" inputmode="email" autocapitalize="none" autocorrect="off"></div>'
         +'<div><label>Phone</label><input id="niPhone" type="tel"></div>'
         +'<div><label>Amount ($) *</label><input id="niAmount" type="number" step="0.01" min="0" placeholder="e.g. 400"></div>'
+        +'<div><label>Quantity</label><input id="niQty" type="number" min="1" placeholder="e.g. 4"></div>'
         +'<div><label>Status</label><select id="niStatus">'+ORDER_STATUSES.map(function(s){return '<option'+(s==='Quoted'?' selected':'')+'>'+s+'</option>';}).join('')+'</select></div>'
       +'</div>'
-      +'<label>What it\'s for</label><input id="niDesc" placeholder="e.g. Powder coating 4 wheels — gloss black">'
+      +'<label>What it\'s for</label><input id="niDesc" placeholder="e.g. Powder coating wheels — gloss black">'
       +'<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">'
         +'<button class="btn" id="niCreate">Create &amp; send invoice</button>'
         +'<button class="tab" id="niCancel">Cancel</button>'
@@ -407,15 +412,17 @@ function bindToolbar(){
   if(nCreate)nCreate.onclick=async function(){
     function v(id){return (document.getElementById(id).value||'').trim();}
     var name=v('niName'), email=v('niEmail').toLowerCase(), phone=v('niPhone'), desc=v('niDesc'), amount=parseFloat(v('niAmount'))||0;
+    var qty=parseInt(v('niQty'),10); if(isNaN(qty))qty=null;
     var status=(document.getElementById('niStatus')||{}).value||'Quoted';
     var msg=document.getElementById('niMsg');
     if(!name||!email||amount<0.5){msg.style.color='#ff7a6b';msg.textContent='Enter customer name, email, and an amount of at least $0.50.';return;}
     nCreate.disabled=true;var old=nCreate.textContent;nCreate.textContent='Creating…';msg.style.color='';msg.textContent='';
     var on=genOrderNo();
-    var ins=await sb.from('orders').insert({order_number:on,name:name,email:email,phone:phone,message:desc,status:status,price:amount,amount_due:amount,charge_type:'Full amount'}).select();
+    var ins=await sb.from('orders').insert({order_number:on,name:name,email:email,phone:phone,quantity:qty,message:desc,status:status,price:amount,amount_due:amount,charge_type:'Full amount'}).select();
     if(ins.error){nCreate.disabled=false;nCreate.textContent=old;msg.style.color='#ff7a6b';msg.textContent='Error: '+ins.error.message;return;}
     var id=ins.data[0].id;
-    var res=await callInvoiceFn({action:'create',order_id:id,amount_cents:Math.round(amount*100),email:email,name:name,description:desc||('Diavolo Finishing — '+on),charge_type:'Full amount',price:amount});
+    var fullDesc=invoiceDesc({order_number:on,quantity:qty,message:desc},'Full amount');
+    var res=await callInvoiceFn({action:'create',order_id:id,amount_cents:Math.round(amount*100),email:email,name:name,description:fullDesc,charge_type:'Full amount',price:amount});
     nCreate.disabled=false;nCreate.textContent=old;
     if(res&&res.error){toast('Invoice error: '+res.error);}
     else{toast(res.emailed?('Invoice emailed to '+email+' ✓'):'Invoice created ✓ — open the order to copy the link');}
@@ -460,6 +467,7 @@ function orderDetail(o){
       +'<div><label>Phone</label><div><a href="tel:'+eA(o.phone)+'">'+eT(o.phone||'—')+'</a></div></div>'
       +'<div><label>Email</label><div>'+eT(o.email||'—')+'</div></div>'
       +'<div><label>Wheel size</label><div>'+eT(o.wheel_size||'—')+'</div></div>'
+      +'<div><label>Quantity</label><div>'+eT(o.quantity!=null?o.quantity:'—')+'</div></div>'
       +'<div><label>Finish</label><div>'+eT(o.finish||'—')+'</div></div>'
       +'<div><label>Color</label><div>'+eT(o.color||'—')+'</div></div>'
     +'</div>'
@@ -469,7 +477,10 @@ function orderDetail(o){
     +'<label>💳 Payment</label>'
     +payBlock(o)
     +'<label style="margin-top:12px;display:block">Internal notes</label><textarea data-of="notes" rows="2">'+eT(o.notes||'')+'</textarea>'
-    +'<button class="btn" data-save-order style="margin-top:10px">Save</button>';
+    +'<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">'
+      +'<button class="btn" data-save-order>Save</button>'
+      +(o.status!=='Done'?'<button class="tab" data-mark-done style="border-color:#2e6b1c;color:#3ecf8e">✓ Mark Done</button>':'<span class="badge" style="background:#103a1c;color:#3ecf8e;align-self:center">Done ✓</span>')
+    +'</div>';
 }
 function payBlock(o){
   var price=o.price!=null?o.price:'';
@@ -491,14 +502,24 @@ function payBlock(o){
     var st=o.invoice_status||'open';
     var label=st==='paid'?'PAID ✓':(st==='void'?'Voided':'Sent — awaiting payment');
     var color=st==='paid'?'#3ecf8e':(st==='void'?'var(--mist)':'#e0a000');
+    var textBtn='';
+    if(o.phone){
+      var opl=chargeLabel(o.charge_type||'Full amount');
+      var amt2=o.amount_due!=null?Number(o.amount_due).toFixed(2):'';
+      var body='Hi '+(o.name||'')+' — Diavolo Finishing here. Your '+opl+' invoice'+(o.order_number?(' for '+o.order_number):'')+' is $'+amt2+'. Pay securely by card: '+o.invoice_url+' . Thank you!';
+      var href='sms:'+digitsPhone(o.phone)+'?&body='+encodeURIComponent(body);
+      textBtn='<a class="tab" href="'+eA(href)+'" data-text-log style="background:#10261a;border-color:#2e6b1c;color:#9be8c0">💬 Text customer</a>';
+    }
+    var textedNote=o.last_texted?('<div class="muted" style="margin-top:6px">Texted ✓ '+eT(new Date(o.last_texted).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}))+'</div>'):'';
     invHtml='<div style="margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:6px">'
       +'<div>Invoice status: <b style="color:'+color+'">'+label+'</b>'+(o.amount_due!=null?(' &nbsp;($'+Number(o.amount_due).toFixed(2)+')'):'')+'</div>'
       +'<div style="margin-top:6px"><a href="'+eA(o.invoice_url)+'" target="_blank">View / pay invoice ↗</a></div>'
       +'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
+        +textBtn
         +'<button class="tab" data-inv-copy data-url="'+eA(o.invoice_url)+'">Copy link</button>'
         +'<button class="tab" data-inv-refresh>Refresh status</button>'
         +((st!=='void'&&st!=='paid')?'<button class="tab" data-inv-void>Void</button>':'')
-      +'</div></div>';
+      +'</div>'+textedNote+'</div>';
   }
   return '<div class="row2" style="margin-top:6px">'
       +'<div><label>Job price ($)</label><input type="number" step="0.01" min="0" data-of="price" value="'+eA(price)+'" placeholder="e.g. 400"></div>'
@@ -536,6 +557,10 @@ function bindOrders(){
       b.classList.remove('saving');
       toast(r.error?('Error: '+r.error.message):'Saved ✓');
     };
+    var md=card.querySelector('[data-mark-done]');
+    if(md)md.onclick=async function(){md.textContent='…';var r=await sb.from('orders').update({status:'Done'}).eq('id',id);if(r.error){toast('Error: '+r.error.message);md.textContent='✓ Mark Done';}else{toast('Marked Done ✓');renderOrders();}};
+    var tl=card.querySelector('[data-text-log]');
+    if(tl)tl.onclick=function(){sb.from('orders').update({last_texted:new Date().toISOString()}).eq('id',id).then(function(){});toast('Opening your Messages app…');};
     var bb=card.querySelector('[data-bill-balance]');
     if(bb)bb.onclick=function(){
       card.querySelector('[data-of="charge_type"]').value='Balance remaining';
@@ -551,7 +576,7 @@ function bindOrders(){
       if(!confirm('Email a Stripe invoice for $'+amount.toFixed(2)+' to '+o.email+'?'))return;
       sendBtn.disabled=true;var old=sendBtn.innerHTML;sendBtn.textContent='Sending…';
       var pr=parseFloat(priceEl.value);
-      var desc='Diavolo Finishing — '+(o.order_number||('Order '+id))+(o.color?(' — '+o.color):'');
+      var desc=invoiceDesc(o,ctEl.value);
       var res=await callInvoiceFn({action:'create',order_id:id,amount_cents:Math.round(amount*100),email:o.email,name:o.name,description:desc,charge_type:ctEl.value,price:isNaN(pr)?null:pr});
       sendBtn.disabled=false;sendBtn.innerHTML=old;
       if(res&&res.error){toast('Error: '+res.error);return;}

@@ -1087,7 +1087,10 @@ footer{
       <option>Other (tell us below)</option>
     </select>
 
-    <label class="qf-label">2 &nbsp;Finish / Service *</label>
+    <label class="qf-label" for="qfQty">2 &nbsp;Quantity (how many?)</label>
+    <input class="cta-input" id="qfQty" name="quantity" type="number" min="1" inputmode="numeric" placeholder="e.g. 4 wheels">
+
+    <label class="qf-label">3 &nbsp;Finish / Service *</label>
     <input type="hidden" name="finish" id="qfFinish" value="">
     <div class="finish-grid" id="qfFinishGrid">
       <div class="finish-pill" data-finish="One Tone" data-color="1"><span class="ft">One Tone</span><span class="fd">Single color — generic or color code</span></div>
@@ -1097,7 +1100,7 @@ footer{
     </div>
 
     <div class="color-field" id="qfColorField" style="display:none;">
-      <label class="qf-label" id="qfColorLabel" for="qfColor">3 &nbsp;Color or Color Code</label>
+      <label class="qf-label" id="qfColorLabel" for="qfColor">4 &nbsp;Color or Color Code</label>
       <input class="cta-input" id="qfColor" name="color" placeholder="Paste a Prismatic color name/number, or type e.g. Gloss Black, RAL 5015">
       <div id="qfColor2Wrap" style="display:none;margin-top:10px;">
         <label class="qf-label" for="qfColor2">Color 2</label>
@@ -1295,7 +1298,7 @@ footer{
     colorField.style.display=pp.getAttribute('data-color')==='1'?'block':'none';
     var two=fin==='Two Tone';
     var w2=document.getElementById('qfColor2Wrap'); if(w2) w2.style.display=two?'block':'none';
-    var lbl=document.getElementById('qfColorLabel'); if(lbl) lbl.innerHTML=two?'3 &nbsp;Color 1':'3 &nbsp;Color or Color Code';
+    var lbl=document.getElementById('qfColorLabel'); if(lbl) lbl.innerHTML=two?'4 &nbsp;Color 1':'4 &nbsp;Color or Color Code';
   });});
   var photoInput=document.getElementById('qfPhoto');
   var photoStatus=document.getElementById('qfPhotoStatus');
@@ -1342,7 +1345,8 @@ footer{
       var c2W=document.getElementById('qfColor2Wrap'),c2El=document.getElementById('qfColor2');
       if(c2W && c2W.style.display!=='none' && c2El && c2El.value.trim()){colorVal+=(colorVal?' + ':'')+c2El.value.trim();}
       var mEl=document.querySelector('#quoteForm textarea[name="message"]')||document.querySelector('textarea[name="message"]');
-      var rec={order_number:orderNo,name:val('qfName'),phone:val('qfPhone'),email:val('qfEmail'),wheel_size:val('qfSize'),finish:val('qfFinish'),color:colorVal,message:mEl?(mEl.value||'').trim():''};
+      var qv=parseInt(val('qfQty'),10);
+      var rec={order_number:orderNo,name:val('qfName'),phone:val('qfPhone'),email:val('qfEmail'),wheel_size:val('qfSize'),quantity:(isNaN(qv)?null:qv),finish:val('qfFinish'),color:colorVal,message:mEl?(mEl.value||'').trim():''};
       function doInsert(){ sb.from('orders').insert(rec).then(function(r){ if(r&&r.error) console.warn('saveOrder insert error:',r.error.message); }); }
       var pin=document.getElementById('qfPhoto');
       var f=pin&&pin.files&&pin.files[0];
@@ -1362,6 +1366,7 @@ footer{
     d.append('phone',phone.value.trim());
     d.append('email',email.value.trim());
     d.append('wheel_size',size.value);
+    var qEl=document.getElementById('qfQty'); d.append('quantity',qEl?qEl.value:'');
     d.append('finish',finishInput.value);
     var c1El=document.getElementById('qfColor'); var c2El=document.getElementById('qfColor2'); var c2W=document.getElementById('qfColor2Wrap');
     var colorVal=c1El?c1El.value.trim():'';
@@ -1595,7 +1600,7 @@ footer{
     if(fh) fh.value='One Tone';
     var cfield=document.getElementById('qfColorField'); if(cfield) cfield.style.display='block';
     var c2w=document.getElementById('qfColor2Wrap'); if(c2w) c2w.style.display='none';
-    var lbl=document.getElementById('qfColorLabel'); if(lbl) lbl.innerHTML='3 &nbsp;Color or Color Code';
+    var lbl=document.getElementById('qfColorLabel'); if(lbl) lbl.innerHTML='4 &nbsp;Color or Color Code';
     if(notes){ var msg=document.querySelector('#quoteForm textarea[name="message"]'); if(msg){ msg.value=(msg.value.trim()?msg.value.trim()+'\n':'')+'Color match notes: '+notes; } }
     var f=photo&&photo.files[0];
     if(f){ try{ var qp=document.getElementById('qfPhoto'); if(qp){ var dt=new DataTransfer(); dt.items.add(f); qp.files=dt.files; qp.dispatchEvent(new Event('change',{bubbles:true})); } }catch(e){} }
